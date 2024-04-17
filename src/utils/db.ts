@@ -12,7 +12,6 @@ function generateJobInsertStatement(job: DBJob): string {
 }
 
 export async function createNewJob(job: DBJob, env: Env): Promise<DBJob | null> {
-	job.id = crypto.randomUUID();
 	await env.DB.prepare(generateJobInsertStatement(job))
 		.bind(...Object.values(job))
 		.all();

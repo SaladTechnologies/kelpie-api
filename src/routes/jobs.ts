@@ -1,6 +1,16 @@
 import { OpenAPIRoute, Path, Query, Enumeration } from '@cloudflare/itty-router-openapi';
 import { error } from '../utils/error';
-import { APIJobSubmissionSchema, APIJobResponseSchema, APIJobSubmission, AuthedRequest, SaladData, Env } from '../types';
+import {
+	APIJobSubmissionSchema,
+	APIJobResponseSchema,
+	APIJobSubmission,
+	AuthedRequest,
+	SaladData,
+	Env,
+	DBJob,
+	APIJobResponse,
+} from '../types';
+import { createNewJob, getJobByUserAndId, getJobByID } from '../utils/db';
 
 export class CreateJob extends OpenAPIRoute {
 	static schema = {
@@ -30,7 +40,36 @@ export class CreateJob extends OpenAPIRoute {
 	};
 
 	async handle(request: AuthedRequest, env: Env, ctx: any, data: { body: APIJobSubmission }) {
-		return error(500, { error: 'Not Implemented', message: 'Not Implemented' });
+		const { body } = data;
+		const { userId } = request;
+		if (!userId) {
+			return error(400, { error: 'User Required', message: 'No user ID found' });
+		}
+		try {
+			const jobToInsert: DBJob = {
+				id: crypto.randomUUID(),
+				user_id: userId,
+				status: 'pending',
+				num_failures: 0,
+				...body,
+				arguments: JSON.stringify(body.arguments),
+			};
+			const job = await createNewJob(jobToInsert, env);
+			if (!job || !job.created) {
+				return error(500, { error: 'Internal server error', message: 'Failed to create job' });
+			}
+
+			const jobToReturn: APIJobResponse = {
+				...job,
+				created: new Date(job.created),
+				arguments: JSON.parse(job.arguments),
+			};
+
+			return jobToReturn;
+		} catch (e: any) {
+			console.log(e);
+			return error(500, { error: 'Internal server error', message: e.message });
+		}
 	}
 }
 
@@ -71,7 +110,33 @@ export class GetJob extends OpenAPIRoute {
 	};
 
 	async handle(request: AuthedRequest, env: Env, ctx: any, data: { params: { id: string } }) {
-		return error(500, { error: 'Not Implemented', message: 'Not Implemented' });
+		const { id } = data.params;
+		const { userId } = request;
+		if (!userId) {
+			return error(400, { error: 'User Required', message: 'No user ID found' });
+		}
+		try {
+			let job;
+			if (userId == env.ADMIN_ID) {
+				job = await getJobByID(id, env);
+			} else {
+				job = await getJobByUserAndId(userId, id, env);
+			}
+			if (!job || !job.created) {
+				return error(404, { error: 'Not Found', message: 'Job not found' });
+			}
+
+			const jobToReturn: APIJobResponse = {
+				...job,
+				created: new Date(job.created),
+				arguments: JSON.parse(job.arguments),
+			};
+
+			return jobToReturn;
+		} catch (e: any) {
+			console.log(e);
+			return error(500, { error: 'Internal server error', message: e.message });
+		}
 	}
 }
 

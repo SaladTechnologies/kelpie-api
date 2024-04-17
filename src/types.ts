@@ -31,7 +31,7 @@ export interface DBJob {
 	id: string; // UNIQUEIDENTIFIER
 	user_id: string;
 	status: 'pending' | 'started' | 'completed' | 'canceled' | 'failed'; // Possible statuses
-	created: Date; // TIMESTAMP, defaulting to current timestamp
+	created?: Date; // TIMESTAMP, defaulting to current timestamp
 	started?: Date; // Optional TIMESTAMP
 	completed?: Date; // Optional TIMESTAMP
 	canceled?: Date; // Optional TIMESTAMP
