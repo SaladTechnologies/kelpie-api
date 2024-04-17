@@ -1,6 +1,6 @@
 import { OpenAPIRoute, Path, Query, Enumeration } from '@cloudflare/itty-router-openapi';
 import { error } from '../utils/error';
-import { APIJobSubmissionSchema, APIJobResponseSchema, APIJobSubmission, AuthedRequest, SaladData } from '../types';
+import { APIJobSubmissionSchema, APIJobResponseSchema, APIJobSubmission, AuthedRequest, SaladData, Env } from '../types';
 
 export class CreateJob extends OpenAPIRoute {
 	static schema = {
@@ -29,7 +29,7 @@ export class CreateJob extends OpenAPIRoute {
 		},
 	};
 
-	async handle(request: AuthedRequest, env: any, ctx: any, data: { body: APIJobSubmission }) {
+	async handle(request: AuthedRequest, env: Env, ctx: any, data: { body: APIJobSubmission }) {
 		return error(500, { error: 'Not Implemented', message: 'Not Implemented' });
 	}
 }
@@ -70,7 +70,7 @@ export class GetJob extends OpenAPIRoute {
 		},
 	};
 
-	async handle(request: AuthedRequest, env: any, ctx: any, data: { params: { id: string } }) {
+	async handle(request: AuthedRequest, env: Env, ctx: any, data: { params: { id: string } }) {
 		return error(500, { error: 'Not Implemented', message: 'Not Implemented' });
 	}
 }
@@ -112,7 +112,7 @@ export class GetWork extends OpenAPIRoute {
 		},
 	};
 
-	async handle(request: AuthedRequest, env: any, ctx: any, data: { query: SaladData }) {
+	async handle(request: AuthedRequest, env: Env, ctx: any, data: { query: SaladData }) {
 		return error(500, { error: 'Not Implemented', message: 'Not Implemented' });
 	}
 }
@@ -160,7 +160,7 @@ export class JobHeartbeat extends OpenAPIRoute {
 		},
 	};
 
-	async handle(request: AuthedRequest, env: any, ctx: any, data: { params: { id: string }; query: SaladData }) {
+	async handle(request: AuthedRequest, env: Env, ctx: any, data: { params: { id: string }; query: SaladData }) {
 		return error(500, { error: 'Not Implemented', message: 'Not Implemented' });
 	}
 }
@@ -205,7 +205,7 @@ export class ReportJobFailure extends OpenAPIRoute {
 		},
 	};
 
-	async handle(request: AuthedRequest, env: any, ctx: any, data: { params: { id: string }; query: SaladData }) {
+	async handle(request: AuthedRequest, env: Env, ctx: any, data: { params: { id: string }; query: SaladData }) {
 		return error(500, { error: 'Not Implemented', message: 'Not Implemented' });
 	}
 }
@@ -250,7 +250,7 @@ export class ReportJobCompleted extends OpenAPIRoute {
 		},
 	};
 
-	async handle(request: AuthedRequest, env: any, ctx: any, data: { params: { id: string }; query: SaladData }) {
+	async handle(request: AuthedRequest, env: Env, ctx: any, data: { params: { id: string }; query: SaladData }) {
 		return error(500, { error: 'Not Implemented', message: 'Not Implemented' });
 	}
 }
@@ -293,7 +293,7 @@ export class CancelJob extends OpenAPIRoute {
 		},
 	};
 
-	async handle(request: AuthedRequest, env: any, ctx: any, data: { params: { id: string } }) {
+	async handle(request: AuthedRequest, env: Env, ctx: any, data: { params: { id: string } }) {
 		return error(500, { error: 'Not Implemented', message: 'Not Implemented' });
 	}
 }

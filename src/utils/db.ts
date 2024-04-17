@@ -145,3 +145,11 @@ export async function getUserById(env: Env, id: string): Promise<DBUser | null> 
 	}
 	return results[0] as unknown as DBUser;
 }
+
+export async function getUserByUsername(env: Env, username: string): Promise<DBUser | null> {
+	const { results } = await env.DB.prepare('SELECT id FROM Users WHERE username = ?').bind(username).all();
+	if (!results.length) {
+		return null;
+	}
+	return results[0] as unknown as DBUser;
+}

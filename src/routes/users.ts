@@ -1,6 +1,7 @@
-import { OpenAPIRoute, Path, Query, Enumeration } from '@cloudflare/itty-router-openapi';
+import { OpenAPIRoute, Path } from '@cloudflare/itty-router-openapi';
 import { error } from '../utils/error';
-import { AuthedRequest } from '../types';
+import { AuthedRequest, Env } from '../types';
+import { createUser, getUserById, getUserByUsername } from '../utils/db';
 
 export class CreateUser extends OpenAPIRoute {
 	static schema = {
@@ -42,8 +43,20 @@ export class CreateUser extends OpenAPIRoute {
 		},
 	};
 
-	async handle(request: AuthedRequest, env: any, ctx: any, data: { body: { username: string } }) {
-		return error(500, { error: 'Not Implemented', message: 'Not Implemented' });
+	async handle(request: AuthedRequest, env: Env, ctx: any, data: { body: { username: string } }) {
+		const { username } = data.body;
+		try {
+			let user = await getUserByUsername(env, username);
+			if (user) {
+				return error(400, { error: 'User exists', message: 'User exists' });
+			}
+			const userId = await createUser(env, username);
+			user = await getUserById(env, userId);
+			return user;
+		} catch (e: any) {
+			console.log(e);
+			return error(500, { error: 'Internal server error', message: e.message });
+		}
 	}
 }
 
@@ -79,6 +92,13 @@ export class CreateToken extends OpenAPIRoute {
 					message: String,
 				},
 			},
+			'404': {
+				description: 'Not found',
+				schema: {
+					error: String,
+					message: String,
+				},
+			},
 			'500': {
 				description: 'Internal server error',
 				schema: {
@@ -89,7 +109,26 @@ export class CreateToken extends OpenAPIRoute {
 		},
 	};
 
-	async handle(request: AuthedRequest, env: any, ctx: any, data: { params: { id: string } }) {
-		return error(500, { error: 'Not Implemented', message: 'Not Implemented' });
+	async handle(
+		request: AuthedRequest,
+		env: Env,
+		ctx: any,
+		data: { params: { id: string }; body: { org_name: string; project_name: string } }
+	) {
+		const { id } = data.params;
+		const { org_name, project_name } = data.body;
+		try {
+			const user = await getUserById(env, id);
+			if (!user) {
+				return error(404, { error: 'User not found', message: 'User not found' });
+			}
+			// Create token
+			const token = crypto.randomUUID();
+			const val = `${id}|${org_name}|${project_name}`;
+			await env.sisyphus_user_tokens.put(token, val);
+		} catch (e: any) {
+			console.log(e);
+			return error(500, { error: 'Internal server error', message: e.message });
+		}
 	}
 }
