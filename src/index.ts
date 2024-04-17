@@ -2,8 +2,9 @@ import { OpenAPIRouter, OpenAPIRoute } from '@cloudflare/itty-router-openapi';
 import { Env } from './types';
 import { createCors } from 'itty-router';
 import { error } from './utils/error';
-import { validateAuth } from './middleware';
+import { validateAuth, adminOnly } from './middleware';
 import { CreateJob, GetJob, GetWork, CancelJob, ReportJobCompleted, ReportJobFailure, JobHeartbeat } from './routes/jobs';
+import { CreateUser, CreateToken } from './routes/users';
 
 const router = OpenAPIRouter({
 	schema: {
@@ -28,6 +29,9 @@ router.delete('/jobs/:id', CancelJob);
 router.post('/jobs/:id/completed', ReportJobCompleted);
 router.post('/jobs/:id/failed', ReportJobFailure);
 router.post('/jobs/:id/heartbeat', JobHeartbeat);
+
+router.post('/users', adminOnly, CreateUser);
+router.post('/users/:id/token', adminOnly, CreateToken);
 
 class CatchAll extends OpenAPIRoute {
 	static schema = {
