@@ -1,3 +1,78 @@
 # Sisyphus API
 
-Sisyphus gets your long running compute intensive job done, no matter how many times the underlying hardware is interrupted.
+Sisyphus is a workload-agnostic framework for coordinating the completion of long-running jobs across a Salad Container Group
+
+## How it works
+
+Sisyphus is a thin coordination layer and accompanying worker binary that helps guide your long-running jobs through to completion, through interruptions and ephemeral failures. You bring your own docker container, salad compute, storage, monitoring, etc.
+
+## Adding the Sisyphus Worker To Your Container Image
+
+```dockerfile
+FROM yourimage:yourtag
+
+# Install wget if it is not already present in your image
+RUN apt-get install -y wget
+
+# Sisyphus is a standalone x86-64 linux binary
+RUN wget https://path.to/sisyphus -P / && chmod +x /sysphus
+
+CMD ["/sisyphus"]
+```
+
+When running the image, you will need additional configuration in the environment:
+
+- AWS/Cloudflare Credentials: Provide AWS_ACCESS_KEY_ID, etc to enable the sisyphus worker to upload and download from your bucket storage. We use the s3 compatability api, so any s3-compatible storage should work.
+- SISYPHUS_API_URL: the root URL for the coordination API, e.g. sisyphus.salad-examples.com
+- SISYPHUS_API_KEY: Your api key for the coordination API, issued by Salad. NOT your Salad API Key.
+
+
+Additionally, your script must support the following things:
+
+- Environment variables:
+  - INPUT_DIR: Where to look for whatever data is needed as input. This will be downloaded from your bucket storage by sisyphus prior to running the script.
+  - CHECKPOINT_DIR: This is where to save progress checkpoints locally. Sisyphus will handle syncing the contents to your bucket storage, and will make sure any existing checkpoint is downloaded prior to running the script.
+  - OUTPUT_DIR: This is where to save any output artifacts. Sisyphus will upload your artifacts to your bucket storage.
+- Saving and Resuming From Checkpoints: Your script should periodically output progress checkpoints to CHECKPOINT_DIR, so that the job can be resumed if it gets interrupted. Similarly, when your script starts, it should check CHECKPOINT_DIR to see if there is anything to resume, and only start from the beginning if no checkpoint is present.
+- It must exit "successfully" with an exit code of 0 upon completion.
+
+## Queueing a job
+
+Queueing a job for processing is a simple post request:
+
+`POST /job`
+
+with the header:
+
+`X-Sisyphus-Key: myapikey`
+
+with a JSON request body:
+
+```json
+{
+  "command": "python",
+  "arguments": [
+    "/path/to/main.py"
+    "--arg",
+    "value"
+  ],
+  "input_bucket": "my-bucket",
+  "input_prefix": "inputs/job1/",
+  "checkpoint_bucket": "my-bucket",
+  "checkpoint_prefix": "checkpoints/job1/",
+  "output_bucket": "my-bucket",
+  "output_prefix": "outputs/job1/",
+  "webhook": "https://myapi.com/sisyphus-webhooks",
+  "container_group_id": "97f504e8-6de6-4322-b5d5-1777a59a7ad3"
+}
+```
+
+## Job Lifecycle
+
+1. When Sisyphus starts on a new node, it starts polling for available work from `/work`. In these requests, it includes some information about what salad node you're on, including the machine id and container group id. This ensures we only hand out work to the correct container group, and that we do not hand out to a machine where that job has previously failed.
+2. Once it receives a job, Sisyphus downloads your inputs, and your checkpoint
+3. Once required files are downloaded, Sisyphus executes your command with the provided arguments, adding environment variables as documented above.
+4. Whenever files are added to the checkpoint directory, sisyphus syncs the directory to the checkpoint bucket and prefix.
+5. Whenever files are added to the output directory, sisyphus syncs the directory to the output bucket and prefix.
+6. When your command exits, the job is marked as complete.
+7. input, checkpoint, and output directories are purged, and the cycle begins again

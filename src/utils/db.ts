@@ -13,12 +13,9 @@ function generateJobInsertStatement(job: any): string {
 
 export async function createNewJob(job: any, env: Env): Promise<any | null> {
 	job.id = crypto.randomUUID();
-	await Promise.all([
-		env.DB.prepare(generateJobInsertStatement(job))
-			.bind(...Object.values(job))
-			.all(),
-		logTrainingEvent(job.id, 'created', {}, env),
-	]);
+	await env.DB.prepare(generateJobInsertStatement(job))
+		.bind(...Object.values(job))
+		.all();
 	return getJobByID(job.id!, env);
 }
 
@@ -86,11 +83,8 @@ export async function updateJobStatus(id: string, status: string, env: Env, sala
 		default:
 			throw new Error(`Invalid status: ${status}`);
 	}
-	const promises: Promise<any>[] = [
-		env.DB.prepare(`UPDATE Jobs SET status = ?${timeStatement}, heartbeat = datetime("now") WHERE id = ?`).bind(status, id).run(),
-		logTrainingEvent(id, eventName, getSaladDataFromWebhookData(saladData), env),
-	];
-	await Promise.all(promises);
+
+	await env.DB.prepare(`UPDATE Jobs SET status = ?${timeStatement}, heartbeat = datetime("now") WHERE id = ?`).bind(status, id).run();
 }
 
 const getSaladDataFromWebhookData = (webhookData: SaladData): SaladData => {
@@ -113,13 +107,6 @@ const getSaladDataFromWebhookData = (webhookData: SaladData): SaladData => {
 	return saladData;
 };
 
-export async function logTrainingEvent(jobId: string, eventType: string, eventData: SaladData, env: Env): Promise<void> {
-	const id = crypto.randomUUID();
-	await env.DB.prepare('INSERT INTO Events (id, job_id, type, data, timestamp) VALUES (?, ?, ?, ?, datetime("now"))')
-		.bind(id, jobId, eventType, JSON.stringify(eventData))
-		.run();
-}
-
 export async function getJobStatus(id: string, env: Env): Promise<string | null> {
 	const { results } = await env.DB.prepare('SELECT status FROM Jobs WHERE id = ?').bind(id).all();
 	if (!results.length) {
@@ -136,10 +123,7 @@ export async function updateJobHeartbeat(id: string, saladData: SaladData, env: 
 		throw err;
 	}
 
-	await Promise.all([
-		env.DB.prepare("UPDATE Jobs SET heartbeat = datetime('now') WHERE id = ? AND status = 'running'").bind(id).run(),
-		logTrainingEvent(id, 'heartbeat', saladData, env),
-	]);
+	await env.DB.prepare("UPDATE Jobs SET heartbeat = datetime('now') WHERE id = ? AND status = 'running'").bind(id).run();
 }
 
 export async function listJobsWithStatus(status: string, env: Env): Promise<any[]> {

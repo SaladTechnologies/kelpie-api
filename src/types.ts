@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 export interface Env {
 	API_KEY: string;
 	API_HEADER: string;
@@ -5,9 +7,6 @@ export interface Env {
 	MAX_HEARTBEAT_AGE: string;
 	MAX_FAILED_ATTEMPTS: string;
 	MAX_FAILURES_PER_WORKER: string;
-	INPUT_PREFIX: string;
-	OUTPUT_PREFIX: string;
-	CHECKPOINT_PREFIX: string;
 
 	sisyphus_upload_tokens: KVNamespace;
 	sisyphus_download_tokens: KVNamespace;
@@ -15,7 +14,6 @@ export interface Env {
 	sisyphus_banned_workers: KVNamespace;
 
 	DB: D1Database;
-	DATA_BUCKET: R2Bucket;
 }
 
 export interface SaladData {
@@ -31,7 +29,54 @@ export interface StatusWebhook extends SaladData {
 	job_id: string;
 }
 
-export interface UploadDownloadParams {
-	key: string;
-	prefix: string;
+export interface DBJob {
+	id: string; // UNIQUEIDENTIFIER
+	user_id: string;
+	status: 'pending' | 'started' | 'completed' | 'canceled' | 'failed'; // Possible statuses
+	created: Date; // TIMESTAMP, defaulting to current timestamp
+	started?: Date; // Optional TIMESTAMP
+	completed?: Date; // Optional TIMESTAMP
+	canceled?: Date; // Optional TIMESTAMP
+	failed?: Date; // Optional TIMESTAMP
+	command: string; // TEXT
+	arguments: string; // TEXT, default '[]'
+	input_bucket: string; // TEXT
+	input_prefix: string; // TEXT
+	checkpoint_bucket: string; // TEXT
+	checkpoint_prefix: string; // TEXT
+	output_bucket: string; // TEXT
+	output_prefix: string; // TEXT
+	webhook?: string; // Optional TEXT
+	heartbeat?: Date; // Optional TIMESTAMP
+	num_failures: number; // INT, default 0
+	container_group_id: string; // TEXT
 }
+
+export const APIJobSchema = z.object({
+	id: z.string(), // UNIQUEIDENTIFIER is typically a UUID in string format
+	user_id: z.string(),
+	status: z.enum(['pending', 'started', 'completed', 'canceled', 'failed']),
+	created: z.date().default(() => new Date()), // Defaults to the current timestamp
+	started: z.date().optional(),
+	completed: z.date().optional(),
+	canceled: z.date().optional(),
+	failed: z.date().optional(),
+	heartbeat: z.date().optional(),
+	num_failures: z.number().default(0),
+	command: z.string(),
+	arguments: z
+		.string()
+		.array()
+		.default(() => []), // Default as an empty array
+	input_bucket: z.string(),
+	input_prefix: z.string(),
+	checkpoint_bucket: z.string(),
+	checkpoint_prefix: z.string(),
+	output_bucket: z.string(),
+	output_prefix: z.string(),
+	webhook: z.string().optional(),
+	container_group_id: z.string(),
+});
+
+// Type to use in TypeScript code
+export type APIJob = z.infer<typeof APIJobSchema>;
