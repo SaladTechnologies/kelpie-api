@@ -147,3 +147,9 @@ export interface Networking {
 export interface ListContainerGroupsResponse {
 	items: SaladContainerGroup[];
 }
+
+export interface DBUser {
+	id: string;
+	username: string;
+	created: Date;
+}
