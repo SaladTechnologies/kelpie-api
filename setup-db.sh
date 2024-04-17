@@ -12,7 +12,7 @@ for file in ./schemas/*.sql; do
 done
 
 admin_token=$(uuidgen)
-npx wrangler kv:key put $admin_token "00000000-0000-0000-0000-000000000000|<ROOT>" --binding sisyphus_user_tokens $flags
+npx wrangler kv:key put $admin_token "00000000-0000-0000-0000-000000000000|<ROOT>|<ROOT>" --binding sisyphus_user_tokens $flags
 
 echo "==Admin token=="
 echo "$admin_token"

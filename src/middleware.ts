@@ -10,9 +10,10 @@ export async function validateAuth(req: AuthedRequest, env: Env) {
 	if (!idAndOrg) {
 		return error(403, { error: 'Forbidden', message: 'Invalid API Key' });
 	}
-	const [id, org] = idAndOrg.split('|');
+	const [id, org, project] = idAndOrg.split('|');
 	req.userId = id;
 	req.saladOrg = org;
+	req.saladProject = project;
 
 	return;
 }

@@ -1,17 +1,18 @@
 import { z } from 'zod';
 
 export interface Env {
-	API_KEY: string;
 	API_HEADER: string;
-	MAX_STORED_CHECKPOINTS: string;
 	MAX_HEARTBEAT_AGE: string;
 	MAX_FAILED_ATTEMPTS: string;
 	MAX_FAILURES_PER_WORKER: string;
+	SALAD_API_KEY: string;
+	ADMIN_ID: string;
 
 	sisyphus_upload_tokens: KVNamespace;
 	sisyphus_download_tokens: KVNamespace;
 	sisyphus_user_tokens: KVNamespace;
 	sisyphus_banned_workers: KVNamespace;
+	sisyphus_salad_cache: KVNamespace;
 
 	DB: D1Database;
 }
@@ -87,4 +88,62 @@ export type APIJobResponse = z.infer<typeof APIJobResponseSchema>;
 export interface AuthedRequest extends Request {
 	userId?: string;
 	saladOrg?: string;
+	saladProject?: string;
+}
+
+export interface SaladContainerGroup {
+	id: string;
+	name: string;
+	display_name: string;
+	container: Container;
+	autostart_policy: boolean;
+	restart_policy: string;
+	replicas: number;
+	current_state: CurrentState;
+	country_codes: string[];
+	networking: Networking;
+	create_time: string;
+	update_time: string;
+	pending_change: boolean;
+	version: number;
+}
+
+export interface Container {
+	image: string;
+	resources: ContainerResources;
+	command: string[];
+	size: number;
+	hash: string;
+}
+
+export interface ContainerResources {
+	cpu: number;
+	memory: number;
+	gpu_classes: string[];
+}
+
+export interface CurrentState {
+	status: string;
+	description: string;
+	start_time: string;
+	finish_time: string;
+	instance_status_count: InstanceStatusCount;
+}
+
+export interface InstanceStatusCount {
+	allocating_count: number;
+	creating_count: number;
+	running_count: number;
+	stopping_count: number;
+}
+
+export interface Networking {
+	protocol: string;
+	port: number;
+	auth: boolean;
+	dns: string;
+}
+
+export interface ListContainerGroupsResponse {
+	items: SaladContainerGroup[];
 }
