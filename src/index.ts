@@ -3,6 +3,7 @@ import { Env } from './types';
 import { createCors } from 'itty-router';
 import { error } from './utils/error';
 import { validateAuth } from './middleware';
+import { CreateJob, GetJob, GetWork, CancelJob, ReportJobCompleted, ReportJobFailure, JobHeartbeat } from './routes/jobs';
 
 const router = OpenAPIRouter({
 	schema: {
@@ -19,6 +20,14 @@ const { preflight, corsify } = createCors({
 
 router.all('*', preflight);
 router.all('*', validateAuth);
+
+router.post('/jobs', CreateJob);
+router.get('/jobs/:id', GetJob);
+router.get('/work', GetWork);
+router.delete('/jobs/:id', CancelJob);
+router.post('/jobs/:id/completed', ReportJobCompleted);
+router.post('/jobs/:id/failed', ReportJobFailure);
+router.post('/jobs/:id/heartbeat', JobHeartbeat);
 
 class CatchAll extends OpenAPIRoute {
 	static schema = {

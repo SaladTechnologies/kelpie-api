@@ -17,9 +17,6 @@ export interface Env {
 }
 
 export interface SaladData {
-	organization_name?: string;
-	project_name?: string;
-	container_group_name?: string;
 	machine_id?: string;
 	container_group_id?: string;
 }
@@ -52,17 +49,7 @@ export interface DBJob {
 	container_group_id: string; // TEXT
 }
 
-export const APIJobSchema = z.object({
-	id: z.string(), // UNIQUEIDENTIFIER is typically a UUID in string format
-	user_id: z.string(),
-	status: z.enum(['pending', 'started', 'completed', 'canceled', 'failed']),
-	created: z.date().default(() => new Date()), // Defaults to the current timestamp
-	started: z.date().optional(),
-	completed: z.date().optional(),
-	canceled: z.date().optional(),
-	failed: z.date().optional(),
-	heartbeat: z.date().optional(),
-	num_failures: z.number().default(0),
+export const APIJobSubmissionSchema = z.object({
 	command: z.string(),
 	arguments: z
 		.string()
@@ -78,8 +65,24 @@ export const APIJobSchema = z.object({
 	container_group_id: z.string(),
 });
 
-// Type to use in TypeScript code
-export type APIJob = z.infer<typeof APIJobSchema>;
+export type APIJobSubmission = z.infer<typeof APIJobSubmissionSchema>;
+
+export const APIJobMetaData = z.object({
+	id: z.string(), // UNIQUEIDENTIFIER is typically a UUID in string format
+	user_id: z.string(),
+	status: z.enum(['pending', 'started', 'completed', 'canceled', 'failed']),
+	created: z.date(), // Defaults to the current timestamp
+	started: z.date().optional(),
+	completed: z.date().optional(),
+	canceled: z.date().optional(),
+	failed: z.date().optional(),
+	heartbeat: z.date().optional(),
+	num_failures: z.number().default(0),
+});
+
+export const APIJobResponseSchema = APIJobMetaData.merge(APIJobSubmissionSchema);
+
+export type APIJobResponse = z.infer<typeof APIJobResponseSchema>;
 
 export interface AuthedRequest extends Request {
 	userId?: string;
