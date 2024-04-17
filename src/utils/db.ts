@@ -1,6 +1,6 @@
-import { Env, SaladData, StatusWebhook } from '../types';
+import { Env, DBJob } from '../types';
 
-function generateJobInsertStatement(job: any): string {
+function generateJobInsertStatement(job: DBJob): string {
 	const keys = Object.keys(job);
 
 	const columns = keys.join(', ');
@@ -11,7 +11,7 @@ function generateJobInsertStatement(job: any): string {
 	return sql;
 }
 
-export async function createNewJob(job: any, env: Env): Promise<any | null> {
+export async function createNewJob(job: DBJob, env: Env): Promise<DBJob | null> {
 	job.id = crypto.randomUUID();
 	await env.DB.prepare(generateJobInsertStatement(job))
 		.bind(...Object.values(job))
@@ -19,16 +19,25 @@ export async function createNewJob(job: any, env: Env): Promise<any | null> {
 	return getJobByID(job.id!, env);
 }
 
-export async function getJobByID(id: string, env: Env): Promise<any | null> {
+export async function getJobByID(id: string, env: Env): Promise<DBJob | null> {
 	const { results } = await env.DB.prepare('SELECT * FROM Jobs WHERE id = ?').bind(id).all();
 	if (!results.length) {
 		return null;
 	}
-	const job = results[0];
+	const job = results[0] as unknown as DBJob;
 	return job;
 }
 
-export async function getHighestPriorityJob(env: Env, num: number = 0): Promise<any | null> {
+export async function getJobByUserAndId(userId: string, jobId: string, env: Env): Promise<DBJob | null> {
+	const { results } = await env.DB.prepare('SELECT * FROM Jobs WHERE id = ? AND user_id = ?').bind(jobId, userId).all();
+	if (!results.length) {
+		return null;
+	}
+	const job = results[0] as unknown as DBJob;
+	return job;
+}
+
+export async function getHighestPriorityJob(env: Env, num: number = 0): Promise<DBJob | null> {
 	const { results: runningResults } = await env.DB.prepare(
 		`
 	SELECT *
@@ -44,7 +53,7 @@ export async function getHighestPriorityJob(env: Env, num: number = 0): Promise<
 		.bind(env.MAX_HEARTBEAT_AGE, env.MAX_HEARTBEAT_AGE, num)
 		.all();
 	if (runningResults.length > 0) {
-		const job = runningResults[0];
+		const job = runningResults[0] as unknown as DBJob;
 		return job;
 	}
 	const { results: pendingResults } = await env.DB.prepare(
@@ -58,13 +67,13 @@ export async function getHighestPriorityJob(env: Env, num: number = 0): Promise<
 		.bind(num)
 		.all();
 	if (pendingResults.length > 0) {
-		const job = pendingResults[0];
+		const job = pendingResults[0] as unknown as DBJob;
 		return job;
 	}
 	return null;
 }
 
-export async function updateJobStatus(id: string, status: string, env: Env, saladData: SaladData): Promise<void> {
+export async function updateJobStatus(id: string, status: string, env: Env): Promise<void> {
 	let timeStatement = '';
 	let eventName;
 	switch (status) {
@@ -87,26 +96,6 @@ export async function updateJobStatus(id: string, status: string, env: Env, sala
 	await env.DB.prepare(`UPDATE Jobs SET status = ?${timeStatement}, heartbeat = datetime("now") WHERE id = ?`).bind(status, id).run();
 }
 
-const getSaladDataFromWebhookData = (webhookData: SaladData): SaladData => {
-	const saladData: SaladData = {};
-	if (webhookData.organization_name) {
-		saladData.organization_name = webhookData.organization_name;
-	}
-	if (webhookData.project_name) {
-		saladData.project_name = webhookData.project_name;
-	}
-	if (webhookData.container_group_name) {
-		saladData.container_group_name = webhookData.container_group_name;
-	}
-	if (webhookData.machine_id) {
-		saladData.machine_id = webhookData.machine_id;
-	}
-	if (webhookData.container_group_id) {
-		saladData.container_group_id = webhookData.container_group_id;
-	}
-	return saladData;
-};
-
 export async function getJobStatus(id: string, env: Env): Promise<string | null> {
 	const { results } = await env.DB.prepare('SELECT status FROM Jobs WHERE id = ?').bind(id).all();
 	if (!results.length) {
@@ -115,7 +104,7 @@ export async function getJobStatus(id: string, env: Env): Promise<string | null>
 	return results[0].status as string;
 }
 
-export async function updateJobHeartbeat(id: string, saladData: SaladData, env: Env): Promise<void> {
+export async function updateJobHeartbeat(id: string, env: Env): Promise<void> {
 	const currentStatus = await getJobStatus(id, env);
 	if (currentStatus !== 'running') {
 		const err = new Error('Job not running');
@@ -126,9 +115,9 @@ export async function updateJobHeartbeat(id: string, saladData: SaladData, env: 
 	await env.DB.prepare("UPDATE Jobs SET heartbeat = datetime('now') WHERE id = ? AND status = 'running'").bind(id).run();
 }
 
-export async function listJobsWithStatus(status: string, env: Env): Promise<any[]> {
+export async function listJobsWithStatus(status: string, env: Env): Promise<DBJob[]> {
 	const { results } = await env.DB.prepare('SELECT * FROM Jobs WHERE status = ? ORDER BY created ASC').bind(status).all();
-	return results;
+	return results as unknown[] as DBJob[];
 }
 
 export async function incrementFailedAttempts(jobId: string, env: Env): Promise<void> {

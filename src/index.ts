@@ -1,13 +1,14 @@
 import { OpenAPIRouter, OpenAPIRoute } from '@cloudflare/itty-router-openapi';
 import { Env } from './types';
-import { withParams, createCors } from 'itty-router';
+import { createCors } from 'itty-router';
 import { error } from './utils/error';
+import { validateAuth } from './middleware';
 
 const router = OpenAPIRouter({
 	schema: {
 		info: {
 			title: 'Sisyphus Job Runner API',
-			description: 'API for running long jobs on interruptible hardware',
+			description: 'API for running long jobs on Salad',
 			version: '0.0.1',
 		},
 	},
@@ -17,7 +18,7 @@ const { preflight, corsify } = createCors({
 });
 
 router.all('*', preflight);
-router.all('*', withParams);
+router.all('*', validateAuth);
 
 class CatchAll extends OpenAPIRoute {
 	static schema = {

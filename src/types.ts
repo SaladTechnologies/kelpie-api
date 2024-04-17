@@ -80,3 +80,8 @@ export const APIJobSchema = z.object({
 
 // Type to use in TypeScript code
 export type APIJob = z.infer<typeof APIJobSchema>;
+
+export interface AuthedRequest extends Request {
+	userId?: string;
+	saladOrg?: string;
+}
