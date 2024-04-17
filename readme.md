@@ -24,12 +24,12 @@ When running the image, you will need additional configuration in the environmen
 
 - AWS/Cloudflare Credentials: Provide AWS_ACCESS_KEY_ID, etc to enable the sisyphus worker to upload and download from your bucket storage. We use the s3 compatability api, so any s3-compatible storage should work.
 - SISYPHUS_API_URL: the root URL for the coordination API, e.g. sisyphus.salad-examples.com
-- SISYPHUS_API_KEY: Your api key for the coordination API, issued by Salad. NOT your Salad API Key.
+- SISYPHUS_API_KEY: Your api key for the coordination API, issued by Salad for use with Sisyphus. NOT your Salad API Key.
 
 
 Additionally, your script must support the following things:
 
-- Environment variables:
+- Environment variables - If these are set by you in your container group configuration, they will be respected, otherwise they will be set by sisyphus.
   - INPUT_DIR: Where to look for whatever data is needed as input. This will be downloaded from your bucket storage by sisyphus prior to running the script.
   - CHECKPOINT_DIR: This is where to save progress checkpoints locally. Sisyphus will handle syncing the contents to your bucket storage, and will make sure any existing checkpoint is downloaded prior to running the script.
   - OUTPUT_DIR: This is where to save any output artifacts. Sisyphus will upload your artifacts to your bucket storage.
@@ -74,5 +74,12 @@ with a JSON request body:
 3. Once required files are downloaded, Sisyphus executes your command with the provided arguments, adding environment variables as documented above.
 4. Whenever files are added to the checkpoint directory, sisyphus syncs the directory to the checkpoint bucket and prefix.
 5. Whenever files are added to the output directory, sisyphus syncs the directory to the output bucket and prefix.
-6. When your command exits, the job is marked as complete.
+6. When your command exits, the job is marked as complete, and a webhook is sent (if configured) to notify you about the job's completion.
 7. input, checkpoint, and output directories are purged, and the cycle begins again
+
+## What it DOES NOT do
+
+1. Sisyphus does not store your data, it merely facilitates syncing your data from local node storage to your preferred s3-compatible storage.
+2. Sisyphus does not monitor the ongoing progress of your job, beyond ensuring it eventually exits successfully. You should integrate your own monitoring solution, e.g. [Weights and Balances](https://wandb.ai/)
+3. Sisyphus does not containerize your job for you. It provides a binary that can be added to existing containerized jobs.
+4. Sisyphus does not create, start, stop, or scale your container groups. It merely hands work out to your container group, and reallocates nodes that have exceeded their maximum failure threshold (5 failures). This reallocation behavior is dependent on adding the sisyphus user (sisyphus@salad.com) to your Salad organization.
