@@ -23,7 +23,7 @@ CMD ["/sisyphus"]
 When running the image, you will need additional configuration in the environment:
 
 - AWS/Cloudflare Credentials: Provide AWS_ACCESS_KEY_ID, etc to enable the sisyphus worker to upload and download from your bucket storage. We use the s3 compatability api, so any s3-compatible storage should work.
-- SISYPHUS_API_URL: the root URL for the coordination API, e.g. sisyphus.salad-examples.com
+- SISYPHUS_API_URL: the root URL for the coordination API, e.g. sisyphus.saladexamples.com
 - SISYPHUS_API_KEY: Your api key for the coordination API, issued by Salad for use with Sisyphus. NOT your Salad API Key.
 
 
