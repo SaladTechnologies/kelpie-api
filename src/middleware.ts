@@ -17,3 +17,10 @@ export async function validateAuth(req: AuthedRequest, env: Env) {
 
 	return;
 }
+
+export async function adminOnly(req: AuthedRequest, env: Env) {
+	if (req.userId !== env.ADMIN_ID) {
+		return error(403, { error: 'Forbidden', message: 'Admin Only' });
+	}
+	return;
+}
