@@ -1,13 +1,10 @@
 {
-  "name": "dreambooth-orchestrator",
-  "version": "0.2.0",
+  "name": "sisyphus-api",
+  "version": "0.0.1",
   "private": true,
   "scripts": {
     "deploy": "wrangler deploy",
-    "dev": "wrangler dev",
-    "start": "wrangler dev",
-    "init-db": "wrangler d1 execute training-jobs --local --file=./schema.sql",
-    "init-db-prod": "wrangler d1 execute training-jobs --file=./schema.sql"
+    "start": "wrangler dev"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240208.0",
