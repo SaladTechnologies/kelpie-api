@@ -12,10 +12,10 @@ kelpie is a thin coordination layer and accompanying worker binary that helps gu
 FROM yourimage:yourtag
 
 # Install wget if it is not already present in your image
-RUN apt-get install -y wget
+RUN apt-get update && install -y wget
 
 # kelpie is a standalone x86-64 linux binary
-RUN wget https://path.to/kelpie -P / && chmod +x /sysphus
+RUN wget https://github.com/SaladTechnologies/kelpie/releases/download/0.0.5/kelpie -P / && chmod +x /kelpie
 
 CMD ["/kelpie"]
 ```
