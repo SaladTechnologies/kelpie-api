@@ -5,7 +5,7 @@ import { createUser, getUserById, getUserByUsername } from '../utils/db';
 
 export class CreateUser extends OpenAPIRoute {
 	static schema = {
-		summary: 'Create a new user',
+		summary: '(ADMIN) Create a new user',
 		description: 'Create a new user',
 		requestBody: {
 			username: String,
@@ -62,7 +62,7 @@ export class CreateUser extends OpenAPIRoute {
 
 export class CreateToken extends OpenAPIRoute {
 	static schema = {
-		summary: 'Create a new token',
+		summary: '(ADMIN) Create a new token',
 		description: 'Create a new token',
 		parameters: {
 			id: Path(String, { description: 'User ID', required: true }),
