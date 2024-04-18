@@ -126,6 +126,10 @@ export class CreateToken extends OpenAPIRoute {
 			const token = crypto.randomUUID();
 			const val = `${id}|${org_name}|${project_name}`;
 			await env.user_tokens.put(token, val);
+			return new Response(JSON.stringify({ token }), {
+				status: 201,
+				headers: { 'Content-Type': 'application/json' },
+			});
 		} catch (e: any) {
 			console.log(e);
 			return error(500, { error: 'Internal server error', message: e.message });

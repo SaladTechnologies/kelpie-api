@@ -66,6 +66,16 @@ export class CreateJob extends OpenAPIRoute {
 				...body,
 				arguments: JSON.stringify(body.arguments),
 			};
+			if (!jobToInsert.input_prefix.endsWith('/')) {
+				jobToInsert.input_prefix += '/';
+			}
+			if (!jobToInsert.checkpoint_prefix.endsWith('/')) {
+				jobToInsert.checkpoint_prefix += '/';
+			}
+			if (!jobToInsert.output_prefix.endsWith('/')) {
+				jobToInsert.output_prefix += '/';
+			}
+
 			const job = await createNewJob(jobToInsert, env);
 			if (!job || !job.created) {
 				return error(500, { error: 'Internal server error', message: 'Failed to create job' });

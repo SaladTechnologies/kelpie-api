@@ -16,7 +16,7 @@ const router = OpenAPIRouter({
 	},
 });
 const { preflight, corsify } = createCors({
-	methods: ['GET', 'POST', 'PUT', 'DELETE'],
+	methods: ['GET', 'POST', 'DELETE'],
 });
 
 router.all('*', preflight);

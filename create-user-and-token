@@ -1,0 +1,35 @@
+#! /usr/bin/env bash
+
+username=$1
+
+if [ -z "$username" ]; then
+    echo "Usage: $0 <username>"
+    exit 1
+fi
+
+if [ -z "$KELPIE_API_KEY" ]; then
+    echo "KELPIE_API_KEY is not set"
+    exit 1
+fi
+
+api_url=${2:-"http://localhost:8787"}
+org_name=${3:-"salad-benchmarking"}
+project_name=${4:-"misc"}
+
+# Create user
+resp=$(curl -X POST $api_url/users \
+  -H "X-Kelpie-Key: $KELPIE_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d "{\"username\": \"$username\"}")
+
+user_id=$(echo $resp | jq -r '.id')
+
+resp=$(curl -X POST $api_url/users/$user_id/token \
+  -H "X-Kelpie-Key: $KELPIE_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d "{\"org_name\": \"$org_name\", \"project_name\": \"$project_name\"}")
+
+echo $resp
+echo "User ID: $user_id"
+echo "Token: "
+echo $resp | jq -r '.token'

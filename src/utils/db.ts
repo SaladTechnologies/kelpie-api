@@ -39,15 +39,15 @@ export async function getJobByUserAndId(userId: string, jobId: string, env: Env)
 export async function getHighestPriorityJob(env: Env, userId: string, containerGroup: string, num: number = 0): Promise<DBJob | null> {
 	const { results: runningResults } = await env.DB.prepare(
 		`
-	SELECT *
-	FROM Jobs
-	WHERE status = 'running' AND user_id = ? AND container_group_id = ?(
-		  heartbeat < datetime('now', '-' || ? || ' seconds')
-		  OR
-		  (heartbeat IS NULL AND created < datetime('now', '-' || ? || ' seconds'))
-	)
-	ORDER BY heartbeat
-	LIMIT 1 OFFSET ?;`
+SELECT *
+FROM Jobs
+WHERE status = 'running' AND user_id = ? AND container_group_id = ? AND (
+		heartbeat < datetime('now', '-' || ? || ' seconds')
+		OR
+		(heartbeat IS NULL AND created < datetime('now', '-' || ? || ' seconds'))
+)
+ORDER BY heartbeat
+LIMIT 1 OFFSET ?;`
 	)
 		.bind(userId, containerGroup, env.MAX_HEARTBEAT_AGE, env.MAX_HEARTBEAT_AGE, num)
 		.all();
@@ -146,7 +146,7 @@ export async function createUser(env: Env, username: string): Promise<string> {
 }
 
 export async function getUserById(env: Env, id: string): Promise<DBUser | null> {
-	const { results } = await env.DB.prepare('SELECT username FROM Users WHERE id = ?').bind(id).all();
+	const { results } = await env.DB.prepare('SELECT * FROM Users WHERE id = ?').bind(id).all();
 	if (!results.length) {
 		return null;
 	}
