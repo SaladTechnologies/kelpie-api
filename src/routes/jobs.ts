@@ -10,7 +10,7 @@ import {
 	DBJob,
 	APIJobResponse,
 } from '../types';
-import { createNewJob, getJobByUserAndId, getJobByID } from '../utils/db';
+import { createNewJob, getJobByUserAndId, getJobByID, getHighestPriorityJob } from '../utils/db';
 
 export class CreateJob extends OpenAPIRoute {
 	static schema = {

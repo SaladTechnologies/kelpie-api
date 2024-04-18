@@ -1,12 +1,12 @@
-# Sisyphus API
+# Kelpie API
 
-Sisyphus is a workload-agnostic framework for coordinating the completion of long-running jobs across a Salad Container Group
+kelpie is a workload-agnostic framework for shepherding long-running jobs to completion across a Salad Container Group, which consists of interruptible nodes.
 
 ## How it works
 
-Sisyphus is a thin coordination layer and accompanying worker binary that helps guide your long-running jobs through to completion, through interruptions and ephemeral failures. You bring your own docker container, salad compute, storage, monitoring, etc.
+kelpie is a thin coordination layer and accompanying worker binary that helps guide your long-running jobs through to completion, through interruptions and ephemeral failures. You bring your own docker container, salad compute, storage, monitoring, etc.
 
-## Adding the Sisyphus Worker To Your Container Image
+## Adding the kelpie Worker To Your Container Image
 
 ```dockerfile
 FROM yourimage:yourtag
@@ -14,25 +14,25 @@ FROM yourimage:yourtag
 # Install wget if it is not already present in your image
 RUN apt-get install -y wget
 
-# Sisyphus is a standalone x86-64 linux binary
-RUN wget https://path.to/sisyphus -P / && chmod +x /sysphus
+# kelpie is a standalone x86-64 linux binary
+RUN wget https://path.to/kelpie -P / && chmod +x /sysphus
 
-CMD ["/sisyphus"]
+CMD ["/kelpie"]
 ```
 
 When running the image, you will need additional configuration in the environment:
 
-- AWS/Cloudflare Credentials: Provide AWS_ACCESS_KEY_ID, etc to enable the sisyphus worker to upload and download from your bucket storage. We use the s3 compatability api, so any s3-compatible storage should work.
-- SISYPHUS_API_URL: the root URL for the coordination API, e.g. sisyphus.saladexamples.com
-- SISYPHUS_API_KEY: Your api key for the coordination API, issued by Salad for use with Sisyphus. NOT your Salad API Key.
+- AWS/Cloudflare Credentials: Provide AWS_ACCESS_KEY_ID, etc to enable the kelpie worker to upload and download from your bucket storage. We use the s3 compatability api, so any s3-compatible storage should work.
+- kelpie_API_URL: the root URL for the coordination API, e.g. kelpie.saladexamples.com
+- kelpie_API_KEY: Your api key for the coordination API, issued by Salad for use with kelpie. NOT your Salad API Key.
 
 
 Additionally, your script must support the following things:
 
-- Environment variables - If these are set by you in your container group configuration, they will be respected, otherwise they will be set by sisyphus.
-  - INPUT_DIR: Where to look for whatever data is needed as input. This will be downloaded from your bucket storage by sisyphus prior to running the script.
-  - CHECKPOINT_DIR: This is where to save progress checkpoints locally. Sisyphus will handle syncing the contents to your bucket storage, and will make sure any existing checkpoint is downloaded prior to running the script.
-  - OUTPUT_DIR: This is where to save any output artifacts. Sisyphus will upload your artifacts to your bucket storage.
+- Environment variables - If these are set by you in your container group configuration, they will be respected, otherwise they will be set by kelpie.
+  - INPUT_DIR: Where to look for whatever data is needed as input. This will be downloaded from your bucket storage by kelpie prior to running the script.
+  - CHECKPOINT_DIR: This is where to save progress checkpoints locally. kelpie will handle syncing the contents to your bucket storage, and will make sure any existing checkpoint is downloaded prior to running the script.
+  - OUTPUT_DIR: This is where to save any output artifacts. kelpie will upload your artifacts to your bucket storage.
 - Saving and Resuming From Checkpoints: Your script should periodically output progress checkpoints to CHECKPOINT_DIR, so that the job can be resumed if it gets interrupted. Similarly, when your script starts, it should check CHECKPOINT_DIR to see if there is anything to resume, and only start from the beginning if no checkpoint is present.
 - It must exit "successfully" with an exit code of 0 upon completion.
 
@@ -44,7 +44,7 @@ Queueing a job for processing is a simple post request:
 
 with the header:
 
-`X-Sisyphus-Key: myapikey`
+`X-kelpie-Key: myapikey`
 
 with a JSON request body:
 
@@ -62,24 +62,24 @@ with a JSON request body:
   "checkpoint_prefix": "checkpoints/job1/",
   "output_bucket": "my-bucket",
   "output_prefix": "outputs/job1/",
-  "webhook": "https://myapi.com/sisyphus-webhooks",
+  "webhook": "https://myapi.com/kelpie-webhooks",
   "container_group_id": "97f504e8-6de6-4322-b5d5-1777a59a7ad3"
 }
 ```
 
 ## Job Lifecycle
 
-1. When Sisyphus starts on a new node, it starts polling for available work from `/work`. In these requests, it includes some information about what salad node you're on, including the machine id and container group id. This ensures we only hand out work to the correct container group, and that we do not hand out to a machine where that job has previously failed.
-2. Once it receives a job, Sisyphus downloads your inputs, and your checkpoint
-3. Once required files are downloaded, Sisyphus executes your command with the provided arguments, adding environment variables as documented above.
-4. Whenever files are added to the checkpoint directory, sisyphus syncs the directory to the checkpoint bucket and prefix.
-5. Whenever files are added to the output directory, sisyphus syncs the directory to the output bucket and prefix.
+1. When kelpie starts on a new node, it starts polling for available work from `/work`. In these requests, it includes some information about what salad node you're on, including the machine id and container group id. This ensures we only hand out work to the correct container group, and that we do not hand out to a machine where that job has previously failed.
+2. Once it receives a job, kelpie downloads your inputs, and your checkpoint
+3. Once required files are downloaded, kelpie executes your command with the provided arguments, adding environment variables as documented above.
+4. Whenever files are added to the checkpoint directory, kelpie syncs the directory to the checkpoint bucket and prefix.
+5. Whenever files are added to the output directory, kelpie syncs the directory to the output bucket and prefix.
 6. When your command exits, the job is marked as complete, and a webhook is sent (if configured) to notify you about the job's completion.
 7. input, checkpoint, and output directories are purged, and the cycle begins again
 
 ## What it DOES NOT do
 
-1. Sisyphus does not store your data, it merely facilitates syncing your data from local node storage to your preferred s3-compatible storage.
-2. Sisyphus does not monitor the ongoing progress of your job, beyond ensuring it eventually exits successfully. You should integrate your own monitoring solution, e.g. [Weights and Balances](https://wandb.ai/)
-3. Sisyphus does not containerize your job for you. It provides a binary that can be added to existing containerized jobs.
-4. Sisyphus does not create, start, stop, or scale your container groups. It merely hands work out to your container group, and reallocates nodes that have exceeded their maximum failure threshold (5 failures). This reallocation behavior is dependent on adding the sisyphus user (sisyphus@salad.com) to your Salad organization.
+1. kelpie does not store your data, it merely facilitates syncing your data from local node storage to your preferred s3-compatible storage.
+2. kelpie does not monitor the ongoing progress of your job, beyond ensuring it eventually exits successfully. You should integrate your own monitoring solution, e.g. [Weights and Balances](https://wandb.ai/)
+3. kelpie does not containerize your job for you. It provides a binary that can be added to existing containerized jobs.
+4. kelpie does not create, start, stop, or scale your container groups. It merely hands work out to your container group, and reallocates nodes that have exceeded their maximum failure threshold (5 failures). This reallocation behavior is dependent on adding the kelpie user (kelpie@salad.com) to your Salad organization.

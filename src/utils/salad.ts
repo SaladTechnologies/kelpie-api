@@ -11,7 +11,7 @@ export async function GetContainerGroupByID(
 ): Promise<SaladContainerGroup | null> {
 	// Check to see if we cached the value already
 	if (!noCache) {
-		const cachedValue = await env.sisyphus_salad_cache.get(id);
+		const cachedValue = await env.kelpie_salad_cache.get(id);
 		if (cachedValue) {
 			return JSON.parse(cachedValue) as SaladContainerGroup;
 		}
@@ -30,7 +30,7 @@ export async function GetContainerGroupByID(
 
 	// Cache the value
 	if (containerGroup) {
-		await env.sisyphus_salad_cache.put(id, JSON.stringify(containerGroup));
+		await env.kelpie_salad_cache.put(id, JSON.stringify(containerGroup));
 	}
 	return containerGroup;
 }

@@ -8,11 +8,11 @@ export interface Env {
 	SALAD_API_KEY: string;
 	ADMIN_ID: string;
 
-	sisyphus_upload_tokens: KVNamespace;
-	sisyphus_download_tokens: KVNamespace;
-	sisyphus_user_tokens: KVNamespace;
-	sisyphus_banned_workers: KVNamespace;
-	sisyphus_salad_cache: KVNamespace;
+	kelpie_upload_tokens: KVNamespace;
+	kelpie_download_tokens: KVNamespace;
+	kelpie_user_tokens: KVNamespace;
+	kelpie_banned_workers: KVNamespace;
+	kelpie_salad_cache: KVNamespace;
 
 	DB: D1Database;
 }

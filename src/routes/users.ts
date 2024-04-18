@@ -125,7 +125,7 @@ export class CreateToken extends OpenAPIRoute {
 			// Create token
 			const token = crypto.randomUUID();
 			const val = `${id}|${org_name}|${project_name}`;
-			await env.sisyphus_user_tokens.put(token, val);
+			await env.kelpie_user_tokens.put(token, val);
 		} catch (e: any) {
 			console.log(e);
 			return error(500, { error: 'Internal server error', message: e.message });

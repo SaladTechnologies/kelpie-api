@@ -9,7 +9,7 @@ import { CreateUser, CreateToken } from './routes/users';
 const router = OpenAPIRouter({
 	schema: {
 		info: {
-			title: 'Sisyphus Job Runner API',
+			title: 'kelpie Job Runner API',
 			description: 'API for running long jobs on Salad',
 			version: '0.0.1',
 		},
