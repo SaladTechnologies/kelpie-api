@@ -8,4 +8,4 @@ CREATE TABLE Users (
 
 CREATE INDEX idx_username ON Users (username);
 
-INSERT INTO Users (id, username, org) VALUES ('00000000-0000-0000-0000-000000000000', 'admin');
+INSERT INTO Users (id, username) VALUES ('00000000-0000-0000-0000-000000000000', 'admin');

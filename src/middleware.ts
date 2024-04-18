@@ -6,7 +6,7 @@ export async function validateAuth(req: AuthedRequest, env: Env) {
 	if (!token) {
 		return error(401, { error: 'Unauthorized', message: 'API Key required' });
 	}
-	let idAndOrg = await env.kelpie_user_tokens.get(token);
+	let idAndOrg = await env.user_tokens.get(token);
 	if (!idAndOrg) {
 		return error(403, { error: 'Forbidden', message: 'Invalid API Key' });
 	}

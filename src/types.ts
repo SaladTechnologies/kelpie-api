@@ -8,29 +8,26 @@ export interface Env {
 	SALAD_API_KEY: string;
 	ADMIN_ID: string;
 
-	kelpie_upload_tokens: KVNamespace;
-	kelpie_download_tokens: KVNamespace;
-	kelpie_user_tokens: KVNamespace;
-	kelpie_banned_workers: KVNamespace;
-	kelpie_salad_cache: KVNamespace;
+	upload_tokens: KVNamespace;
+	download_tokens: KVNamespace;
+	user_tokens: KVNamespace;
+	banned_workers: KVNamespace;
+	salad_cache: KVNamespace;
 
 	DB: D1Database;
 }
 
-export interface SaladData {
-	machine_id?: string;
-	container_group_id?: string;
-}
+export const SaladDataSchema = z.object({
+	machine_id: z.string(),
+	container_group_id: z.string(),
+});
 
-export interface StatusWebhook extends SaladData {
-	status: string;
-	job_id: string;
-}
+export type SaladData = z.infer<typeof SaladDataSchema>;
 
 export interface DBJob {
 	id: string; // UNIQUEIDENTIFIER
 	user_id: string;
-	status: 'pending' | 'started' | 'completed' | 'canceled' | 'failed'; // Possible statuses
+	status: 'pending' | 'running' | 'completed' | 'canceled' | 'failed'; // Possible statuses
 	created?: Date; // TIMESTAMP, defaulting to current timestamp
 	started?: Date; // Optional TIMESTAMP
 	completed?: Date; // Optional TIMESTAMP
@@ -48,6 +45,7 @@ export interface DBJob {
 	heartbeat?: Date; // Optional TIMESTAMP
 	num_failures: number; // INT, default 0
 	container_group_id: string; // TEXT
+	machine_id?: string; // Optional TEXT
 }
 
 export const APIJobSubmissionSchema = z.object({
@@ -71,7 +69,7 @@ export type APIJobSubmission = z.infer<typeof APIJobSubmissionSchema>;
 export const APIJobMetaData = z.object({
 	id: z.string(), // UNIQUEIDENTIFIER is typically a UUID in string format
 	user_id: z.string(),
-	status: z.enum(['pending', 'started', 'completed', 'canceled', 'failed']),
+	status: z.enum(['pending', 'running', 'completed', 'canceled', 'failed']),
 	created: z.date(), // Defaults to the current timestamp
 	started: z.date().optional(),
 	completed: z.date().optional(),
@@ -79,6 +77,7 @@ export const APIJobMetaData = z.object({
 	failed: z.date().optional(),
 	heartbeat: z.date().optional(),
 	num_failures: z.number().default(0),
+	machine_id: z.string().optional(),
 });
 
 export const APIJobResponseSchema = APIJobMetaData.merge(APIJobSubmissionSchema);

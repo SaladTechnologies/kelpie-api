@@ -23,8 +23,8 @@ CMD ["/kelpie"]
 When running the image, you will need additional configuration in the environment:
 
 - AWS/Cloudflare Credentials: Provide AWS_ACCESS_KEY_ID, etc to enable the kelpie worker to upload and download from your bucket storage. We use the s3 compatability api, so any s3-compatible storage should work.
-- kelpie_API_URL: the root URL for the coordination API, e.g. kelpie.saladexamples.com
-- kelpie_API_KEY: Your api key for the coordination API, issued by Salad for use with kelpie. NOT your Salad API Key.
+- KELPIE_API_URL: the root URL for the coordination API, e.g. kelpie.saladexamples.com
+- KELPIE_API_KEY: Your api key for the coordination API, issued by Salad for use with kelpie. NOT your Salad API Key.
 
 
 Additionally, your script must support the following things:

@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS Jobs (
   webhook TEXT,
   heartbeat TIMESTAMP,
   num_failures INT NOT NULL DEFAULT 0,
-  container_group_id TEXT NOT NULL
+  container_group_id TEXT NOT NULL,
+  machine_id TEXT
 );
 
 CREATE INDEX idx_running_jobs ON Jobs (status, heartbeat, created)

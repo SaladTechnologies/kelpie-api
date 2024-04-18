@@ -9,8 +9,20 @@ import {
 	Env,
 	DBJob,
 	APIJobResponse,
+	SaladDataSchema,
 } from '../types';
-import { createNewJob, getJobByUserAndId, getJobByID, getHighestPriorityJob } from '../utils/db';
+import {
+	createNewJob,
+	getJobByUserAndId,
+	getJobByID,
+	getHighestPriorityJob,
+	updateJobStatus,
+	updateJobHeartbeat,
+	getFailedAttempts,
+	incrementFailedAttempts,
+} from '../utils/db';
+import { reallocateInstance, getContainerGroupByID } from '../utils/salad';
+import { status } from 'itty-router';
 
 export class CreateJob extends OpenAPIRoute {
 	static schema = {
@@ -65,7 +77,12 @@ export class CreateJob extends OpenAPIRoute {
 				arguments: JSON.parse(job.arguments),
 			};
 
-			return jobToReturn;
+			return new Response(JSON.stringify(jobToReturn), {
+				status: 202,
+				headers: {
+					'Content-Type': 'application/json',
+				},
+			});
 		} catch (e: any) {
 			console.log(e);
 			return error(500, { error: 'Internal server error', message: e.message });
@@ -151,14 +168,7 @@ export class GetWork extends OpenAPIRoute {
 		responses: {
 			'200': {
 				description: 'Job found',
-				schema: APIJobResponseSchema,
-			},
-			'204': {
-				description: 'No work available',
-				schema: {
-					error: String,
-					message: String,
-				},
+				schema: APIJobResponseSchema.array(),
 			},
 			'400': {
 				description: 'Invalid request',
@@ -178,7 +188,47 @@ export class GetWork extends OpenAPIRoute {
 	};
 
 	async handle(request: AuthedRequest, env: Env, ctx: any, data: { query: SaladData }) {
-		return error(500, { error: 'Not Implemented', message: 'Not Implemented' });
+		const { machine_id, container_group_id } = data.query;
+		const { userId, saladOrg, saladProject } = request;
+		if (!userId) {
+			return error(400, { error: 'User Required', message: 'No user ID found' });
+		}
+		try {
+			let num_tries = 0;
+			while (num_tries < parseInt(env.MAX_FAILURES_PER_WORKER)) {
+				const job = await getHighestPriorityJob(env, userId, container_group_id, num_tries);
+				if (!job || !job.created) {
+					return [];
+				}
+				const isBanned = await env.banned_workers.get(`${machine_id}:${job.id}`);
+				if (isBanned) {
+					num_tries++;
+					continue;
+				}
+				await updateJobStatus(job.id, userId, machine_id, 'running', env);
+				fireWebhook(env, request.headers.get(env.API_HEADER) || '', job.id, userId, machine_id, container_group_id, 'running');
+				return [
+					{
+						...job,
+						created: new Date(job.created),
+						arguments: JSON.parse(job.arguments),
+					},
+				];
+			}
+
+			// If we get here, we've tried too many times
+			// Reallocate the instance, asynchronously
+			getContainerGroupByID(env, container_group_id, saladOrg!, saladProject!).then((containerGroup) => {
+				if (containerGroup) {
+					reallocateInstance(env, saladOrg!, saladProject!, containerGroup.name, machine_id);
+				}
+			});
+
+			return [];
+		} catch (e: any) {
+			console.log(e);
+			return error(500, { error: 'Internal server error', message: e.message });
+		}
 	}
 }
 
@@ -188,15 +238,14 @@ export class JobHeartbeat extends OpenAPIRoute {
 		description: 'Update the heartbeat for a job',
 		parameters: {
 			id: Path(String, { description: 'Job ID', required: true }),
-			machine_id: Query(String, { description: 'Machine ID', required: true }),
-			container_group_id: Query(String, { description: 'Container Group ID', required: true }),
 		},
+		requestBody: SaladDataSchema,
 		responses: {
 			'200': {
 				description: 'Job heartbeat updated',
 				schema: {
 					status: new Enumeration({
-						values: ['pending', 'started', 'completed', 'canceled', 'failed'],
+						values: ['pending', 'running', 'completed', 'canceled', 'failed'],
 						description: 'Job status',
 					}),
 				},
@@ -225,8 +274,22 @@ export class JobHeartbeat extends OpenAPIRoute {
 		},
 	};
 
-	async handle(request: AuthedRequest, env: Env, ctx: any, data: { params: { id: string }; query: SaladData }) {
-		return error(500, { error: 'Not Implemented', message: 'Not Implemented' });
+	async handle(request: AuthedRequest, env: Env, ctx: any, data: { params: { id: string }; body: SaladData }) {
+		const { id } = data.params;
+		const { userId } = request;
+		if (!userId) {
+			return error(400, { error: 'User Required', message: 'No user ID found' });
+		}
+		try {
+			const currentStatus = await updateJobHeartbeat(id, userId, env);
+			return { status: currentStatus };
+		} catch (e: any) {
+			if (e.message === 'Job not found') {
+				return error(404, { error: 'Not Found', message: 'Job not found' });
+			}
+			console.log(e);
+			return error(500, { error: 'Internal server error', message: e.message });
+		}
 	}
 }
 
@@ -236,9 +299,8 @@ export class ReportJobFailure extends OpenAPIRoute {
 		description: 'Report a job failure',
 		parameters: {
 			id: Path(String, { description: 'Job ID', required: true }),
-			machine_id: Query(String, { description: 'Machine ID', required: true }),
-			container_group_id: Query(String, { description: 'Container Group ID', required: true }),
 		},
+		requestBody: SaladDataSchema,
 		responses: {
 			'202': {
 				description: 'Job failure reported',
@@ -270,8 +332,74 @@ export class ReportJobFailure extends OpenAPIRoute {
 		},
 	};
 
-	async handle(request: AuthedRequest, env: Env, ctx: any, data: { params: { id: string }; query: SaladData }) {
-		return error(500, { error: 'Not Implemented', message: 'Not Implemented' });
+	async handle(request: AuthedRequest, env: Env, ctx: any, data: { params: { id: string }; body: SaladData }) {
+		const { id } = data.params;
+		const { userId } = request;
+		if (!userId) {
+			return error(400, { error: 'User Required', message: 'No user ID found' });
+		}
+		try {
+			const currentFailureCount = await getFailedAttempts(id, userId, env);
+			if (currentFailureCount === null) {
+				return error(404, { error: 'Not Found', message: 'Job not found' });
+			}
+			await env.banned_workers.put(`${data.body.machine_id}:${id}`, 'true');
+			if (currentFailureCount + 1 >= parseInt(env.MAX_FAILED_ATTEMPTS)) {
+				await Promise.all([updateJobStatus(id, userId, data.body.machine_id, 'failed', env), incrementFailedAttempts(id, userId, env)]);
+				fireWebhook(
+					env,
+					request.headers.get(env.API_HEADER) || '',
+					id,
+					userId,
+					data.body.machine_id,
+					data.body.container_group_id,
+					'failed'
+				);
+			}
+			return new Response(JSON.stringify({ message: 'Failure reported' }), {
+				status: 202,
+				headers: {
+					'Content-Type': 'application/json',
+				},
+			});
+		} catch (e: any) {
+			console.log(e);
+			return error(500, { error: 'Internal server error', message: e.message });
+		}
+	}
+}
+
+async function fireWebhook(
+	env: Env,
+	apiToken: string,
+	jobId: string,
+	userId: string,
+	machineId: string,
+	containerGroupId: string,
+	status: string
+) {
+	const job = await getJobByUserAndId(userId, jobId, env);
+	if (job && job.webhook) {
+		try {
+			const resp = await fetch(job.webhook, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					[env.API_HEADER]: apiToken,
+				},
+				body: JSON.stringify({
+					status,
+					job_id: jobId,
+					machine_id: machineId,
+					container_group_id: containerGroupId,
+				}),
+			});
+			if (!resp.ok) {
+				console.log('Failed to send webhook', resp.status, await resp.text());
+			}
+		} catch (e: any) {
+			console.log('Failed to send webhook', e);
+		}
 	}
 }
 
@@ -281,11 +409,10 @@ export class ReportJobCompleted extends OpenAPIRoute {
 		description: 'Report a job completed',
 		parameters: {
 			id: Path(String, { description: 'Job ID', required: true }),
-			machine_id: Query(String, { description: 'Machine ID', required: true }),
-			container_group_id: Query(String, { description: 'Container Group ID', required: true }),
 		},
+		requestBody: SaladDataSchema,
 		responses: {
-			'202': {
+			'200': {
 				description: 'Job completed reported',
 				schema: {
 					message: String,
@@ -315,8 +442,21 @@ export class ReportJobCompleted extends OpenAPIRoute {
 		},
 	};
 
-	async handle(request: AuthedRequest, env: Env, ctx: any, data: { params: { id: string }; query: SaladData }) {
-		return error(500, { error: 'Not Implemented', message: 'Not Implemented' });
+	async handle(request: AuthedRequest, env: Env, ctx: any, data: { params: { id: string }; body: SaladData }) {
+		const { id } = data.params;
+		const { userId } = request;
+		const { machine_id, container_group_id } = data.body;
+		if (!userId) {
+			return error(400, { error: 'User Required', message: 'No user ID found' });
+		}
+		try {
+			await updateJobStatus(id, userId, machine_id, 'completed', env);
+			fireWebhook(env, request.headers.get(env.API_HEADER) || '', id, userId, machine_id, container_group_id, 'completed');
+			return { message: 'Completed reported' };
+		} catch (e: any) {
+			console.log(e);
+			return error(500, { error: 'Internal server error', message: e.message });
+		}
 	}
 }
 
@@ -327,6 +467,7 @@ export class CancelJob extends OpenAPIRoute {
 		parameters: {
 			id: Path(String, { description: 'Job ID', required: true }),
 		},
+		requestBody: SaladDataSchema,
 		responses: {
 			'202': {
 				description: 'Job canceled',
@@ -358,7 +499,20 @@ export class CancelJob extends OpenAPIRoute {
 		},
 	};
 
-	async handle(request: AuthedRequest, env: Env, ctx: any, data: { params: { id: string } }) {
-		return error(500, { error: 'Not Implemented', message: 'Not Implemented' });
+	async handle(request: AuthedRequest, env: Env, ctx: any, data: { params: { id: string }; body: SaladData }) {
+		const { id } = data.params;
+		const { userId } = request;
+		const { machine_id, container_group_id } = data.body;
+		if (!userId) {
+			return error(400, { error: 'User Required', message: 'No user ID found' });
+		}
+		try {
+			await updateJobStatus(id, userId, machine_id, 'canceled', env);
+			fireWebhook(env, request.headers.get(env.API_HEADER) || '', id, userId, machine_id, container_group_id, 'canceled');
+			return { message: 'Job canceled' };
+		} catch (e: any) {
+			console.log(e);
+			return error(500, { error: 'Internal server error', message: e.message });
+		}
 	}
 }
