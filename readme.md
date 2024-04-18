@@ -44,7 +44,7 @@ Queueing a job for processing is a simple post request:
 
 with the header:
 
-`X-kelpie-Key: myapikey`
+`X-Kelpie-Key: myapikey`
 
 with a JSON request body:
 
