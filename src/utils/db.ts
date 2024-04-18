@@ -49,7 +49,7 @@ WHERE status = 'running' AND user_id = ? AND container_group_id = ? AND (
 ORDER BY heartbeat
 LIMIT 1 OFFSET ?;`
 	)
-		.bind(userId, containerGroup, env.MAX_HEARTBEAT_AGE, env.MAX_HEARTBEAT_AGE, num)
+		.bind(userId, containerGroup, parseInt(env.MAX_HEARTBEAT_AGE), parseInt(env.MAX_HEARTBEAT_AGE), num)
 		.all();
 	if (runningResults.length > 0) {
 		const job = runningResults[0] as unknown as DBJob;
@@ -83,6 +83,9 @@ export async function updateJobStatus(jobId: string, userId: string, machineId: 
 			break;
 		case 'canceled':
 			timeStatement = ', canceled = datetime("now")';
+			break;
+		case 'completed':
+			timeStatement = ', completed = datetime("now")';
 			break;
 		default:
 			throw new Error(`Invalid status: ${status}`);

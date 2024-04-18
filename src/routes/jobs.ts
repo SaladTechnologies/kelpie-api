@@ -365,6 +365,8 @@ export class ReportJobFailure extends OpenAPIRoute {
 					data.body.container_group_id,
 					'failed'
 				);
+			} else {
+				await incrementFailedAttempts(id, userId, env);
 			}
 			return new Response(JSON.stringify({ message: 'Failure reported' }), {
 				status: 202,
