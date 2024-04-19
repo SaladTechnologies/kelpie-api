@@ -479,7 +479,6 @@ export class CancelJob extends OpenAPIRoute {
 		parameters: {
 			id: Path(String, { description: 'Job ID', required: true }),
 		},
-		requestBody: SaladDataSchema,
 		responses: {
 			'202': {
 				description: 'Job canceled',
@@ -514,13 +513,11 @@ export class CancelJob extends OpenAPIRoute {
 	async handle(request: AuthedRequest, env: Env, ctx: any, data: { params: { id: string }; body: SaladData }) {
 		const { id } = data.params;
 		const { userId } = request;
-		const { machine_id, container_group_id } = data.body;
 		if (!userId) {
 			return error(400, { error: 'User Required', message: 'No user ID found' });
 		}
 		try {
-			await updateJobStatus(id, userId, machine_id, 'canceled', env);
-			fireWebhook(env, request.headers.get(env.API_HEADER) || '', id, userId, machine_id, container_group_id, 'canceled');
+			await updateJobStatus(id, userId, 'user', 'canceled', env);
 			return { message: 'Job canceled' };
 		} catch (e: any) {
 			console.log(e);

@@ -25,7 +25,7 @@ export async function getContainerGroupByID(
 		console.log(await response.text());
 		return null;
 	}
-	const data: ListContainerGroupsResponse = await response.json();
+	const data = (await response.json()) as ListContainerGroupsResponse;
 	const containerGroup = data.items.find((group) => group.id === id) || null;
 
 	// Cache the value
