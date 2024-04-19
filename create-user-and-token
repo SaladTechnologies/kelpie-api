@@ -1,20 +1,35 @@
 #! /usr/bin/env bash
 
-username=$1
+# Usage: ./create_user.sh <username> [--api-url <api-url>] [--org <salad-org>] [--project <salad-project>]
+api_url="http://localhost:8787"
+org_name="salad-benchmarking"
+project_name="kelpie"
 
-if [ -z "$username" ]; then
-    echo "Usage: $0 <username>"
-    exit 1
-fi
+while [[ $# -gt 0 ]]; do
+    key="$1"
+    case $key in
+        --api-url)
+        api_url="$2"
+        shift
+        shift
+        ;;
+        --org)
+        org_name="$2"
+        shift
+        shift
+        ;;
+        --project)
+        project_name="$2"
+        shift
+        shift
+        ;;
+        *)
+        username="$1"
+        shift
+        ;;
+    esac
+done
 
-if [ -z "$KELPIE_API_KEY" ]; then
-    echo "KELPIE_API_KEY is not set"
-    exit 1
-fi
-
-api_url=${2:-"http://localhost:8787"}
-org_name=${3:-"salad-benchmarking"}
-project_name=${4:-"misc"}
 
 # Create user
 resp=$(curl -X POST $api_url/users \
