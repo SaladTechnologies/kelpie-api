@@ -3,15 +3,15 @@ import { Env } from './types';
 import { createCors } from 'itty-router';
 import { error } from './utils/error';
 import { validateAuth, adminOnly } from './middleware';
-import { CreateJob, GetJob, GetWork, CancelJob, ReportJobCompleted, ReportJobFailure, JobHeartbeat } from './routes/jobs';
+import { CreateJob, GetJob, GetWork, CancelJob, ReportJobCompleted, ReportJobFailure, JobHeartbeat, ListJobs } from './routes/jobs';
 import { CreateUser, CreateToken } from './routes/users';
 
 const router = OpenAPIRouter({
 	schema: {
 		info: {
-			title: 'kelpie Job Runner API',
+			title: '🐶 Kelpie Job Runner API',
 			description: 'API for running long jobs on Salad',
-			version: '0.0.1',
+			version: '0.0.2',
 		},
 	},
 });
@@ -23,6 +23,7 @@ router.all('*', preflight);
 router.all('*', validateAuth);
 
 router.post('/jobs', CreateJob);
+router.get('/jobs', ListJobs);
 router.get('/jobs/:id', GetJob);
 router.get('/work', GetWork);
 router.delete('/jobs/:id', CancelJob);

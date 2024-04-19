@@ -20,14 +20,14 @@ import {
 	updateJobHeartbeat,
 	getFailedAttempts,
 	incrementFailedAttempts,
+	listJobsWithArbitraryFilter,
 } from '../utils/db';
 import { reallocateInstance, getContainerGroupByID } from '../utils/salad';
-import { status } from 'itty-router';
 
 export class CreateJob extends OpenAPIRoute {
 	static schema = {
-		summary: 'Create a new job',
-		description: 'Create a new job',
+		summary: 'Queue a new job',
+		description: 'Queue a new job',
 		requestBody: APIJobSubmissionSchema,
 		responses: {
 			'202': {
@@ -522,6 +522,92 @@ export class CancelJob extends OpenAPIRoute {
 			await updateJobStatus(id, userId, machine_id, 'canceled', env);
 			fireWebhook(env, request.headers.get(env.API_HEADER) || '', id, userId, machine_id, container_group_id, 'canceled');
 			return { message: 'Job canceled' };
+		} catch (e: any) {
+			console.log(e);
+			return error(500, { error: 'Internal server error', message: e.message });
+		}
+	}
+}
+
+export class ListJobs extends OpenAPIRoute {
+	static schema = {
+		summary: 'List jobs',
+		description: 'List your jobs',
+		parameters: {
+			status: Query(
+				new Enumeration({ description: 'Job status', values: ['pending', 'running', 'completed', 'canceled', 'failed'], required: false })
+			),
+			container_group_id: Query(String, { description: 'Container Group ID', required: false }),
+			page_size: Query(Number, { description: 'Page size', default: 100, required: false }),
+			page: Query(Number, { description: 'Page number', default: 1, required: false }),
+			asc: Query(Boolean, { description: 'Sort ascending', default: false, required: false }),
+		},
+		responses: {
+			'200': {
+				description: 'Jobs found',
+				schema: {
+					_count: Number,
+					jobs: APIJobResponseSchema.array(),
+				},
+			},
+			'400': {
+				description: 'Invalid request',
+				schema: {
+					error: String,
+					message: String,
+				},
+			},
+			'500': {
+				description: 'Internal server error',
+				schema: {
+					error: String,
+					message: String,
+				},
+			},
+		},
+	};
+
+	async handle(
+		request: AuthedRequest,
+		env: Env,
+		ctx: any,
+		data: {
+			query: {
+				status?: string;
+				container_group_id?: string;
+				page_size: number;
+				page: number;
+				asc: boolean;
+			};
+		}
+	) {
+		const { userId } = request;
+		if (!userId) {
+			return error(400, { error: 'User Required', message: 'No user ID found' });
+		}
+
+		const filter: any = {};
+		if (userId !== env.ADMIN_ID) {
+			filter.user_id = userId;
+		}
+		if (data.query.status) {
+			filter.status = data.query.status;
+		}
+		if (data.query.container_group_id) {
+			filter.container_group_id = data.query.container_group_id;
+		}
+
+		try {
+			console.log(filter);
+			const jobs = await listJobsWithArbitraryFilter(filter, data.query.asc, data.query.page_size, data.query.page, env);
+			return {
+				_count: jobs.length,
+				jobs: jobs.map((job) => ({
+					...job,
+					created: new Date(job.created!),
+					arguments: JSON.parse(job.arguments),
+				})),
+			};
 		} catch (e: any) {
 			console.log(e);
 			return error(500, { error: 'Internal server error', message: e.message });

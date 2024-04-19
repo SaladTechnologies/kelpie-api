@@ -122,8 +122,25 @@ export async function updateJobHeartbeat(id: string, userId: string, env: Env): 
 	return currentStatus;
 }
 
-export async function listJobsWithStatus(status: string, env: Env): Promise<DBJob[]> {
-	const { results } = await env.DB.prepare('SELECT * FROM Jobs WHERE status = ? ORDER BY created ASC').bind(status).all();
+export async function listJobsWithArbitraryFilter(
+	filter: any,
+	asc: boolean,
+	pageSize: number = 100,
+	page: number = 1,
+	env: Env
+): Promise<DBJob[]> {
+	let query = 'SELECT * FROM Jobs';
+	const keys = Object.keys(filter);
+	if (keys.length) {
+		query += ' WHERE ';
+		query += keys.map((k) => `${k} = ?`).join(' AND ');
+	}
+	query += ' ORDER BY created';
+	query += asc ? ' ASC' : ' DESC';
+	query += ' LIMIT ? OFFSET ?';
+	const { results } = await env.DB.prepare(query)
+		.bind(...Object.values(filter), pageSize, (page - 1) * pageSize)
+		.all();
 	return results as unknown[] as DBJob[];
 }
 
