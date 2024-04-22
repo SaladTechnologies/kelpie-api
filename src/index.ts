@@ -3,15 +3,25 @@ import { Env } from './types';
 import { createCors } from 'itty-router';
 import { error } from './utils/error';
 import { validateAuth, adminOnly } from './middleware';
-import { CreateJob, GetJob, GetWork, CancelJob, ReportJobCompleted, ReportJobFailure, JobHeartbeat, ListJobs } from './routes/jobs';
-import { CreateUser, CreateToken } from './routes/users';
+import {
+	CreateJob,
+	GetJob,
+	GetWork,
+	CancelJob,
+	ReportJobCompleted,
+	ReportJobFailure,
+	JobHeartbeat,
+	ListJobs,
+	ClearJobs,
+} from './routes/jobs';
+import { CreateUser, CreateToken, ClearUsers } from './routes/users';
 
 const router = OpenAPIRouter({
 	schema: {
 		info: {
 			title: '🐶 Kelpie Job Runner API',
 			description: 'API for running long jobs on Salad',
-			version: '0.1.0',
+			version: '0.2.0',
 		},
 	},
 });
@@ -36,9 +46,11 @@ router.delete('/jobs/:id', CancelJob);
 router.post('/jobs/:id/completed', ReportJobCompleted);
 router.post('/jobs/:id/failed', ReportJobFailure);
 router.post('/jobs/:id/heartbeat', JobHeartbeat);
+router.delete('/jobs', adminOnly, ClearJobs);
 
 router.post('/users', adminOnly, CreateUser);
 router.post('/users/:id/token', adminOnly, CreateToken);
+router.delete('/users', adminOnly, ClearUsers);
 
 class CatchAll extends OpenAPIRoute {
 	static schema = {
