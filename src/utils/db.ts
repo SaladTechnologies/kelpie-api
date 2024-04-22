@@ -42,14 +42,14 @@ export async function getHighestPriorityJob(env: Env, userId: string, containerG
 SELECT *
 FROM Jobs
 WHERE status = 'running' AND user_id = ? AND container_group_id = ? AND (
-		heartbeat < datetime('now', '-' || ? || ' seconds')
+		heartbeat < datetime('now', '-' || 2 * heartbeat_interval || ' seconds')
 		OR
-		(heartbeat IS NULL AND created < datetime('now', '-' || ? || ' seconds'))
+		(heartbeat IS NULL AND created < datetime('now', '-' || 2 * heartbeat_interval || ' seconds'))
 )
 ORDER BY heartbeat
 LIMIT 1 OFFSET ?;`
 	)
-		.bind(userId, containerGroup, parseInt(env.MAX_HEARTBEAT_AGE), parseInt(env.MAX_HEARTBEAT_AGE), num)
+		.bind(userId, containerGroup, num)
 		.all();
 	if (runningResults.length > 0) {
 		const job = runningResults[0] as unknown as DBJob;
@@ -57,11 +57,11 @@ LIMIT 1 OFFSET ?;`
 	}
 	const { results: pendingResults } = await env.DB.prepare(
 		`
-	SELECT *
-    FROM Jobs
-    WHERE status = 'pending'
-    ORDER BY heartbeat
-    LIMIT 1 OFFSET ?;`
+SELECT *
+FROM Jobs
+WHERE status = 'pending' AND user_id = ? AND container_group_id = ?
+ORDER BY heartbeat
+LIMIT 1 OFFSET ?;`
 	)
 		.bind(num)
 		.all();

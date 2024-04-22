@@ -2,8 +2,6 @@ import { z } from 'zod';
 
 export interface Env {
 	API_HEADER: string;
-	MAX_HEARTBEAT_AGE: string;
-	MAX_FAILED_ATTEMPTS: string;
 	MAX_FAILURES_PER_WORKER: string;
 	SALAD_API_KEY: string;
 	ADMIN_ID: string;
@@ -33,33 +31,37 @@ export interface DBJob {
 	completed?: Date; // Optional TIMESTAMP
 	canceled?: Date; // Optional TIMESTAMP
 	failed?: Date; // Optional TIMESTAMP
+	heartbeat?: Date; // Optional TIMESTAMP
+	num_failures: number; // INT, default 0
+	machine_id?: string; // Optional TEXT
+
 	command: string; // TEXT
 	arguments: string; // TEXT, default '[]'
+	environment: string; // TEXT, default '{}'
 	input_bucket: string; // TEXT
 	input_prefix: string; // TEXT
 	checkpoint_bucket: string; // TEXT
 	checkpoint_prefix: string; // TEXT
 	output_bucket: string; // TEXT
 	output_prefix: string; // TEXT
+	max_failures: number; // INT, default 3
+	heartbeat_interval: number; // INT, default 30
 	webhook?: string; // Optional TEXT
-	heartbeat?: Date; // Optional TIMESTAMP
-	num_failures: number; // INT, default 0
 	container_group_id: string; // TEXT
-	machine_id?: string; // Optional TEXT
 }
 
 export const APIJobSubmissionSchema = z.object({
 	command: z.string(),
-	arguments: z
-		.string()
-		.array()
-		.default(() => []), // Default as an empty array
+	arguments: z.string().array().default([]), // Default as an empty array
+	environment: z.record(z.string()).optional().default({}),
 	input_bucket: z.string(),
 	input_prefix: z.string(),
 	checkpoint_bucket: z.string(),
 	checkpoint_prefix: z.string(),
 	output_bucket: z.string(),
 	output_prefix: z.string(),
+	max_failures: z.number().optional().default(3),
+	heartbeat_interval: z.number().optional().default(30),
 	webhook: z.string().optional(),
 	container_group_id: z.string(),
 });

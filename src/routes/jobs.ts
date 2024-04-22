@@ -65,6 +65,7 @@ export class CreateJob extends OpenAPIRoute {
 				num_failures: 0,
 				...body,
 				arguments: JSON.stringify(body.arguments),
+				environment: JSON.stringify(body.environment),
 			};
 			if (!jobToInsert.input_prefix.endsWith('/')) {
 				jobToInsert.input_prefix += '/';
@@ -85,6 +86,7 @@ export class CreateJob extends OpenAPIRoute {
 				...job,
 				created: new Date(job.created),
 				arguments: JSON.parse(job.arguments),
+				environment: JSON.parse(job.environment),
 			};
 
 			return new Response(JSON.stringify(jobToReturn), {
@@ -157,6 +159,7 @@ export class GetJob extends OpenAPIRoute {
 				...job,
 				created: new Date(job.created),
 				arguments: JSON.parse(job.arguments),
+				environment: JSON.parse(job.environment),
 			};
 
 			return jobToReturn;
@@ -349,12 +352,14 @@ export class ReportJobFailure extends OpenAPIRoute {
 			return error(400, { error: 'User Required', message: 'No user ID found' });
 		}
 		try {
-			const currentFailureCount = await getFailedAttempts(id, userId, env);
-			if (currentFailureCount === null) {
+			const job = await getJobByUserAndId(userId, id, env);
+			if (!job || !job.created) {
 				return error(404, { error: 'Not Found', message: 'Job not found' });
 			}
+			const { num_failures, max_failures = 3 } = job;
+
 			await env.banned_workers.put(`${data.body.machine_id}:${id}`, 'true');
-			if (currentFailureCount + 1 >= parseInt(env.MAX_FAILED_ATTEMPTS)) {
+			if (num_failures + 1 >= max_failures) {
 				await Promise.all([updateJobStatus(id, userId, data.body.machine_id, 'failed', env), incrementFailedAttempts(id, userId, env)]);
 				fireWebhook(
 					env,
