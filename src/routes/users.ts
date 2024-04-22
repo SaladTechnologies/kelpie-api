@@ -7,6 +7,7 @@ export class CreateUser extends OpenAPIRoute {
 	static schema = {
 		summary: '(ADMIN) Create a new user',
 		description: 'Create a new user',
+		security: [{ apiKey: [] }],
 		requestBody: {
 			username: String,
 		},
@@ -64,6 +65,7 @@ export class CreateToken extends OpenAPIRoute {
 	static schema = {
 		summary: '(ADMIN) Create a new token',
 		description: 'Create a new token',
+		security: [{ apiKey: [] }],
 		parameters: {
 			id: Path(String, { description: 'User ID', required: true }),
 		},

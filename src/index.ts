@@ -11,16 +11,22 @@ const router = OpenAPIRouter({
 		info: {
 			title: '🐶 Kelpie Job Runner API',
 			description: 'API for running long jobs on Salad',
-			version: '0.0.2',
+			version: '0.1.0',
 		},
 	},
 });
+
 const { preflight, corsify } = createCors({
 	methods: ['GET', 'POST', 'DELETE'],
 });
 
 router.all('*', preflight);
 router.all('*', validateAuth);
+router.registry.registerComponent('securitySchemes', 'apiKey', {
+	type: 'apiKey',
+	in: 'header',
+	name: 'X-Kelpie-Key',
+});
 
 router.post('/jobs', CreateJob);
 router.get('/jobs', ListJobs);

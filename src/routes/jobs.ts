@@ -28,6 +28,7 @@ export class CreateJob extends OpenAPIRoute {
 	static schema = {
 		summary: 'Queue a new job',
 		description: 'Queue a new job',
+		security: [{ apiKey: [] }],
 		requestBody: APIJobSubmissionSchema,
 		responses: {
 			'202': {
@@ -106,6 +107,7 @@ export class GetJob extends OpenAPIRoute {
 	static schema = {
 		summary: 'Get a job',
 		description: 'Get a job by ID',
+		security: [{ apiKey: [] }],
 		parameters: {
 			id: Path(String, { description: 'Job ID', required: true }),
 		},
@@ -174,6 +176,7 @@ export class GetWork extends OpenAPIRoute {
 	static schema = {
 		summary: 'Get work',
 		description: 'Get a job to work on',
+		security: [{ apiKey: [] }],
 		parameters: {
 			machine_id: Query(String, { description: 'Machine ID', required: true }),
 			container_group_id: Query(String, { description: 'Container Group ID', required: true }),
@@ -249,6 +252,7 @@ export class JobHeartbeat extends OpenAPIRoute {
 	static schema = {
 		summary: 'Job heartbeat',
 		description: 'Update the heartbeat for a job',
+		security: [{ apiKey: [] }],
 		parameters: {
 			id: Path(String, { description: 'Job ID', required: true }),
 		},
@@ -310,6 +314,7 @@ export class ReportJobFailure extends OpenAPIRoute {
 	static schema = {
 		summary: 'Report job failure',
 		description: 'Report a job failure',
+		security: [{ apiKey: [] }],
 		parameters: {
 			id: Path(String, { description: 'Job ID', required: true }),
 		},
@@ -424,6 +429,7 @@ export class ReportJobCompleted extends OpenAPIRoute {
 	static schema = {
 		summary: 'Report job completed',
 		description: 'Report a job completed',
+		security: [{ apiKey: [] }],
 		parameters: {
 			id: Path(String, { description: 'Job ID', required: true }),
 		},
@@ -481,6 +487,7 @@ export class CancelJob extends OpenAPIRoute {
 	static schema = {
 		summary: 'Cancel job',
 		description: 'Cancel a job',
+		security: [{ apiKey: [] }],
 		parameters: {
 			id: Path(String, { description: 'Job ID', required: true }),
 		},
@@ -535,6 +542,7 @@ export class ListJobs extends OpenAPIRoute {
 	static schema = {
 		summary: 'List jobs',
 		description: 'List your jobs',
+		security: [{ apiKey: [] }],
 		parameters: {
 			status: Query(
 				new Enumeration({ description: 'Job status', values: ['pending', 'running', 'completed', 'canceled', 'failed'], required: false })
