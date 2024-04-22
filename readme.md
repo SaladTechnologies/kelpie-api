@@ -3,6 +3,10 @@
 
 kelpie is a workload-agnostic framework for shepherding long-running jobs to completion across a Salad Container Group, which consists of interruptible nodes.
 
+## Swagger Docs
+
+There are live swagger docs that should be considered more accurate and up to date than this readme: https://kelpie.saladexamples.com/docs
+
 ## How it works
 
 kelpie is a thin coordination layer (this API) and accompanying worker binary that helps guide your long-running jobs through to completion, through interruptions and ephemeral failures. You bring your own docker container, salad compute, storage, monitoring, etc.
