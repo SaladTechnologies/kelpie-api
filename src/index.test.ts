@@ -1,13 +1,5 @@
 import { expect, it, describe } from 'vitest';
-import { Env } from './types';
-import assert from 'assert';
-
-declare module 'cloudflare:test' {
-	interface ProvidedEnv extends Env {}
-}
-
-// local admin key
-const adminToken = '178f0334-69b1-4d03-a96b-b9cfc7ee4b22';
+import { adminToken } from './utils/test';
 
 describe('GET /unknown', () => {
 	it('should return 404 for an unmatched route', async () => {

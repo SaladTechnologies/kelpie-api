@@ -18,9 +18,9 @@ import {
 	getHighestPriorityJob,
 	updateJobStatus,
 	updateJobHeartbeat,
-	getFailedAttempts,
 	incrementFailedAttempts,
 	listJobsWithArbitraryFilter,
+	clearJobs,
 } from '../utils/db';
 import { reallocateInstance, getContainerGroupByID } from '../utils/salad';
 
@@ -46,6 +46,18 @@ In particular, we recommend choosing a provider with no egress fees, such as [Cl
 | \`webhook\`           | string   | URL for the webhook to notify upon completion or failure. | **required** |
 | \`container_group_id\`| string  | ID of the container group where the command will be executed. | **required** |
 `;
+
+function dbJobToAPIJob(job: DBJob): APIJobResponse {
+	const apiJob: any = { ...job };
+	apiJob.created = job.created ? new Date(job.created) : undefined;
+	apiJob.started = job.started ? new Date(job.started) : undefined;
+	apiJob.completed = job.completed ? new Date(job.completed) : undefined;
+	apiJob.failed = job.failed ? new Date(job.failed) : undefined;
+	apiJob.canceled = job.canceled ? new Date(job.canceled) : undefined;
+	apiJob.arguments = job.arguments ? JSON.parse(job.arguments) : [];
+	apiJob.environment = job.environment ? JSON.parse(job.environment) : {};
+	return apiJob as APIJobResponse;
+}
 
 export class CreateJob extends OpenAPIRoute {
 	static schema = {
@@ -106,12 +118,7 @@ export class CreateJob extends OpenAPIRoute {
 				return error(500, { error: 'Internal server error', message: 'Failed to create job' });
 			}
 
-			const jobToReturn: APIJobResponse = {
-				...job,
-				created: new Date(job.created),
-				arguments: JSON.parse(job.arguments),
-				environment: JSON.parse(job.environment),
-			};
+			const jobToReturn = dbJobToAPIJob(job);
 
 			return new Response(JSON.stringify(jobToReturn), {
 				status: 202,
@@ -180,12 +187,7 @@ export class GetJob extends OpenAPIRoute {
 				return error(404, { error: 'Not Found', message: 'Job not found' });
 			}
 
-			const jobToReturn: APIJobResponse = {
-				...job,
-				created: new Date(job.created),
-				arguments: JSON.parse(job.arguments),
-				environment: JSON.parse(job.environment),
-			};
+			const jobToReturn = dbJobToAPIJob(job);
 
 			return jobToReturn;
 		} catch (e: any) {
@@ -245,14 +247,9 @@ export class GetWork extends OpenAPIRoute {
 					continue;
 				}
 				await updateJobStatus(job.id, userId, machine_id, 'running', env);
+				const updatedJob = await getJobByUserAndId(userId, job.id, env);
 				fireWebhook(env, request.headers.get(env.API_HEADER) || '', job.id, userId, machine_id, container_group_id, 'running');
-				return [
-					{
-						...job,
-						created: new Date(job.created),
-						arguments: JSON.parse(job.arguments),
-					},
-				];
+				return [dbJobToAPIJob(updatedJob!)];
 			}
 
 			// If we get here, we've tried too many times
@@ -553,7 +550,12 @@ export class CancelJob extends OpenAPIRoute {
 		}
 		try {
 			await updateJobStatus(id, userId, 'user', 'canceled', env);
-			return { message: 'Job canceled' };
+			return new Response(JSON.stringify({ message: 'Job canceled' }), {
+				status: 202,
+				headers: {
+					'Content-Type': 'application/json',
+				},
+			});
 		} catch (e: any) {
 			console.log(e);
 			return error(500, { error: 'Internal server error', message: e.message });
@@ -635,12 +637,48 @@ export class ListJobs extends OpenAPIRoute {
 			const jobs = await listJobsWithArbitraryFilter(filter, data.query.asc, data.query.page_size, data.query.page, env);
 			return {
 				_count: jobs.length,
-				jobs: jobs.map((job) => ({
-					...job,
-					created: new Date(job.created!),
-					arguments: JSON.parse(job.arguments),
-				})),
+				jobs: jobs.map(dbJobToAPIJob),
 			};
+		} catch (e: any) {
+			console.log(e);
+			return error(500, { error: 'Internal server error', message: e.message });
+		}
+	}
+}
+
+export class ClearJobs extends OpenAPIRoute {
+	static schema = {
+		summary: '(ADMIN) Clear all jobs',
+		description: 'Clear all jobs',
+		security: [{ apiKey: [] }],
+		responses: {
+			'204': {
+				description: 'Jobs cleared',
+				schema: {
+					message: String,
+				},
+			},
+			'403': {
+				description: 'Forbidden',
+				schema: {
+					error: String,
+					message: String,
+				},
+			},
+			'500': {
+				description: 'Internal server error',
+				schema: {
+					error: String,
+					message: String,
+				},
+			},
+		},
+	};
+
+	async handle(request: AuthedRequest, env: Env, ctx: any) {
+		try {
+			await clearJobs(env);
+			return new Response(null, { status: 204 });
 		} catch (e: any) {
 			console.log(e);
 			return error(500, { error: 'Internal server error', message: e.message });

@@ -1,11 +1,11 @@
 {
   "name": "kelpie-api",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "deploy": "wrangler deploy",
     "start": "wrangler dev",
-    "test": "vitest run"
+    "test": "vitest run --no-file-parallelism"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.2.2",

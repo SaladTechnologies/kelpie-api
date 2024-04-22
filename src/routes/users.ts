@@ -1,7 +1,7 @@
 import { OpenAPIRoute, Path } from '@cloudflare/itty-router-openapi';
 import { error } from '../utils/error';
 import { AuthedRequest, Env } from '../types';
-import { createUser, getUserById, getUserByUsername } from '../utils/db';
+import { createUser, getUserById, getUserByUsername, clearAllNonAdminUsers } from '../utils/db';
 
 export class CreateUser extends OpenAPIRoute {
 	static schema = {
@@ -53,7 +53,7 @@ export class CreateUser extends OpenAPIRoute {
 			}
 			const userId = await createUser(env, username);
 			user = await getUserById(env, userId);
-			return user;
+			return new Response(JSON.stringify(user), { status: 201, headers: { 'Content-Type': 'application/json' } });
 		} catch (e: any) {
 			console.log(e);
 			return error(500, { error: 'Internal server error', message: e.message });
@@ -132,6 +132,43 @@ export class CreateToken extends OpenAPIRoute {
 				status: 201,
 				headers: { 'Content-Type': 'application/json' },
 			});
+		} catch (e: any) {
+			console.log(e);
+			return error(500, { error: 'Internal server error', message: e.message });
+		}
+	}
+}
+
+export class ClearUsers extends OpenAPIRoute {
+	static schema = {
+		summary: '(ADMIN) Clear all users',
+		description: 'Clear all users',
+		security: [{ apiKey: [] }],
+		responses: {
+			'204': {
+				description: 'Users cleared',
+			},
+			'403': {
+				description: 'Forbidden',
+				schema: {
+					error: String,
+					message: String,
+				},
+			},
+			'500': {
+				description: 'Internal server error',
+				schema: {
+					error: String,
+					message: String,
+				},
+			},
+		},
+	};
+
+	async handle(request: AuthedRequest, env: Env, ctx: any) {
+		try {
+			await clearAllNonAdminUsers(env);
+			return new Response(null, { status: 204 });
 		} catch (e: any) {
 			console.log(e);
 			return error(500, { error: 'Internal server error', message: e.message });
