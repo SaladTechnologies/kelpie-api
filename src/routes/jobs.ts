@@ -24,10 +24,33 @@ import {
 } from '../utils/db';
 import { reallocateInstance, getContainerGroupByID } from '../utils/salad';
 
+const queueJobDocs = `
+Queue a new job to be executed by the specified container group. [Get your Container Group ID](https://docs.salad.com/reference/get_container_group)
+
+Note that although we use the term "AWS S3 bucket" in the documentation, you can use any S3-compatible storage provider. 
+In particular, we recommend choosing a provider with no egress fees, such as [Cloudflare R2.](https://www.cloudflare.com/developer-platform/r2/)
+
+| Key                 | Type     | Description        | Default |
+|---------------------|----------|--------------------|---------|
+| \`command\`           | string   | The command to execute. | **required** |
+| \`arguments\`         | array    | List of arguments for the command. | [] |
+| \`environment\`       | object   | Key-value pairs defining the environment variables. | {} |
+| \`input_bucket\`      | string   | Name of the AWS S3 bucket for input files. | **required** |
+| \`input_prefix\`      | string   | Prefix for input files in the S3 bucket. | **required** |
+| \`checkpoint_bucket\` | string   | Name of the AWS S3 bucket for checkpoint files. | **required** |
+| \`checkpoint_prefix\` | string   | Prefix for checkpoint files in the S3 bucket. | **required** |
+| \`output_bucket\`     | string   | Name of the AWS S3 bucket for output files. | **required** |
+| \`output_prefix\`     | string   | Prefix for output files in the S3 bucket. | **required** |
+| \`max_failures\`      | integer  | Maximum number of allowed failures before the job is marked failed. | 3 |
+| \`heartbeat_interval\`| integer | Time interval (in seconds) for sending heartbeat signals. | 30 |
+| \`webhook\`           | string   | URL for the webhook to notify upon completion or failure. | **required** |
+| \`container_group_id\`| string  | ID of the container group where the command will be executed. | **required** |
+`;
+
 export class CreateJob extends OpenAPIRoute {
 	static schema = {
 		summary: 'Queue a new job',
-		description: 'Queue a new job',
+		description: queueJobDocs,
 		security: [{ apiKey: [] }],
 		requestBody: APIJobSubmissionSchema,
 		responses: {
