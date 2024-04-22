@@ -1,0 +1,35 @@
+name = "kelpie-api"
+main = "src/index.ts"
+compatibility_date = "2024-02-08"
+compatibility_flags = ["nodejs_compat"]
+
+[placement]
+mode = "smart"
+
+# Variable bindings. These are arbitrary, plaintext strings (similar to environment variables)
+# Note: Use secrets to store sensitive data.
+# Docs: https://developers.cloudflare.com/workers/platform/environment-variables
+[vars]
+API_HEADER = "x-kelpie-key"
+MAX_FAILURES_PER_WORKER = "5"
+ADMIN_ID = "00000000-0000-0000-0000-000000000000"
+
+
+# Bind a KV Namespace. Use KV as persistent storage for small key-value pairs.
+# Docs: https://developers.cloudflare.com/workers/runtime-apis/kv
+[[kv_namespaces]]
+binding = "user_tokens"
+id = "67649c36-79dd-4b23-a9bb-23d057c18731"
+
+[[kv_namespaces]]
+binding = "banned_workers"
+id = "330b9fef-d0b3-4061-962c-9f1a038f488c"
+
+[[kv_namespaces]]
+binding = "salad_cache"
+id = "fea342ad-1262-4264-8fe9-57a9984204d7"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "kelpie"
+database_id = "411d21c7-614d-4fba-bf46-ee405dcf4c06"
