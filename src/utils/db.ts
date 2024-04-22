@@ -63,7 +63,7 @@ WHERE status = 'pending' AND user_id = ? AND container_group_id = ?
 ORDER BY heartbeat
 LIMIT 1 OFFSET ?;`
 	)
-		.bind(num)
+		.bind(userId, containerGroup, num)
 		.all();
 	if (pendingResults.length > 0) {
 		const job = pendingResults[0] as unknown as DBJob;
