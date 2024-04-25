@@ -15,6 +15,7 @@ import {
 	ClearJobs,
 } from './routes/jobs';
 import { CreateUser, CreateToken, ClearUsers } from './routes/users';
+import { CreateScalingRule, UpdateScalingRule, ClearScalingRules, ListScalingRules } from './routes/scaling-rules';
 
 const router = OpenAPIRouter({
 	schema: {
@@ -46,11 +47,16 @@ router.delete('/jobs/:id', CancelJob);
 router.post('/jobs/:id/completed', ReportJobCompleted);
 router.post('/jobs/:id/failed', ReportJobFailure);
 router.post('/jobs/:id/heartbeat', JobHeartbeat);
-router.delete('/jobs', adminOnly, ClearJobs);
 
+router.post('/scaling-rules', CreateScalingRule);
+router.patch('/scaling-rules', UpdateScalingRule);
+router.get('/scaling-rules', ListScalingRules);
+
+router.delete('/jobs', adminOnly, ClearJobs);
 router.post('/users', adminOnly, CreateUser);
 router.post('/users/:id/token', adminOnly, CreateToken);
 router.delete('/users', adminOnly, ClearUsers);
+router.delete('/scaling-rules', adminOnly, ClearScalingRules);
 
 class CatchAll extends OpenAPIRoute {
 	static schema = {

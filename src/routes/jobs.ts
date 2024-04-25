@@ -21,7 +21,7 @@ import {
 	incrementFailedAttempts,
 	listJobsWithArbitraryFilter,
 	clearJobs,
-} from '../utils/db';
+} from '../db/jobs';
 import { reallocateInstance, getContainerGroupByID } from '../utils/salad';
 
 const queueJobDocs = `

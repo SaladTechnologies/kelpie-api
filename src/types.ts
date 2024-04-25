@@ -86,6 +86,26 @@ export const APIJobResponseSchema = APIJobMetaData.merge(APIJobSubmissionSchema)
 
 export type APIJobResponse = z.infer<typeof APIJobResponseSchema>;
 
+export const APIScalingRuleSchema = z.object({
+	container_group_id: z.string().uuid(),
+	min_replicas: z.number().int().min(0).max(250),
+	max_replicas: z.number().int().min(0).max(250),
+	idle_threshold_seconds: z.number().int().min(0).max(3600),
+});
+
+export type APIScalingRule = z.infer<typeof APIScalingRuleSchema>;
+
+export const APIScalingRuleUpdateSchema = APIScalingRuleSchema.partial();
+export type APIScalingRuleUpdate = z.infer<typeof APIScalingRuleUpdateSchema>;
+
+export const APIScalingRuleResponseSchema = APIScalingRuleSchema.merge(
+	z.object({
+		user_id: z.string().uuid(),
+		created: z.date(),
+		updated: z.date().optional(),
+	})
+);
+
 export interface AuthedRequest extends Request {
 	userId?: string;
 	saladOrg?: string;
@@ -153,4 +173,14 @@ export interface DBUser {
 	id: string;
 	username: string;
 	created: Date;
+}
+
+export interface DBScalingRules {
+	container_group_id: string;
+	user_id: string;
+	created?: Date;
+	updated?: Date;
+	min_replicas: number;
+	max_replicas: number;
+	idle_threshold_seconds: number;
 }

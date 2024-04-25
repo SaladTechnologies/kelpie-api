@@ -1,34 +1,14 @@
 import { expect, it, describe, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
-import { adminToken, clearJobs, clearUsers } from '../utils/test';
+import { adminToken, clearJobs, clearUsers, createUser } from '../utils/test';
 
 let user: any;
 let token: string;
 beforeAll(async () => {
 	await clearJobs();
 	await clearUsers();
-	const userResp = await fetch('http://localhost:8787/users', {
-		method: 'POST',
-		headers: {
-			'X-Kelpie-Key': adminToken,
-			'Content-Type': 'application/json',
-		},
-		body: JSON.stringify({
-			username: 'testuser-jobs',
-		}),
-	});
-	user = (await userResp.json()) as any;
-
-	const tokenResp = await fetch(`http://localhost:8787/users/${user.id}/token`, {
-		method: 'POST',
-		headers: {
-			'X-Kelpie-Key': adminToken,
-		},
-		body: JSON.stringify({
-			org_name: 'testorg',
-			project_name: 'testproject',
-		}),
-	});
-	token = ((await tokenResp.json()) as any).token;
+	const { user: u, token: t } = await createUser('testuser-jobs');
+	user = u;
+	token = t;
 });
 
 afterAll(async () => {
