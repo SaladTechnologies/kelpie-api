@@ -60,8 +60,8 @@ export const APIJobSubmissionSchema = z.object({
 	checkpoint_prefix: z.string(),
 	output_bucket: z.string(),
 	output_prefix: z.string(),
-	max_failures: z.number().optional().default(3),
-	heartbeat_interval: z.number().optional().default(30),
+	max_failures: z.number().int().optional().default(3),
+	heartbeat_interval: z.number().int().optional().default(30),
 	webhook: z.string().optional(),
 	container_group_id: z.string(),
 });
@@ -100,6 +100,9 @@ export type APIScalingRuleUpdate = z.infer<typeof APIScalingRuleUpdateSchema>;
 
 export const APIScalingRuleResponseSchema = APIScalingRuleSchema.merge(
 	z.object({
+		org_name: z.string(),
+		project_name: z.string(),
+		container_group_name: z.string(),
 		user_id: z.string().uuid(),
 		created: z.date(),
 		updated: z.date().optional(),
@@ -175,8 +178,11 @@ export interface DBUser {
 	created: Date;
 }
 
-export interface DBScalingRules {
+export interface DBScalingRule {
 	container_group_id: string;
+	org_name: string;
+	project_name: string;
+	container_group_name: string;
 	user_id: string;
 	created?: Date;
 	updated?: Date;
@@ -184,3 +190,14 @@ export interface DBScalingRules {
 	max_replicas: number;
 	idle_threshold_seconds: number;
 }
+
+export type Instance = {
+	machine_id: string;
+	state: 'allocating' | 'creating' | 'running' | 'downloading';
+	update_time: string;
+	version: number;
+};
+
+export type InstanceList = {
+	instances: Instance[];
+};

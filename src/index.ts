@@ -15,7 +15,15 @@ import {
 	ClearJobs,
 } from './routes/jobs';
 import { CreateUser, CreateToken, ClearUsers } from './routes/users';
-import { CreateScalingRule, UpdateScalingRule, ClearScalingRules, ListScalingRules } from './routes/scaling-rules';
+import {
+	CreateScalingRule,
+	UpdateScalingRule,
+	ClearScalingRules,
+	ListScalingRules,
+	GetScalingRule,
+	DeleteScalingRule,
+} from './routes/scaling-rules';
+import { evaluateAllScalingRules } from './autoscale';
 
 const router = OpenAPIRouter({
 	schema: {
@@ -42,15 +50,17 @@ router.registry.registerComponent('securitySchemes', 'apiKey', {
 router.post('/jobs', CreateJob);
 router.get('/jobs', ListJobs);
 router.get('/jobs/:id', GetJob);
-router.get('/work', GetWork);
 router.delete('/jobs/:id', CancelJob);
+router.get('/work', GetWork);
 router.post('/jobs/:id/completed', ReportJobCompleted);
 router.post('/jobs/:id/failed', ReportJobFailure);
 router.post('/jobs/:id/heartbeat', JobHeartbeat);
 
 router.post('/scaling-rules', CreateScalingRule);
-router.patch('/scaling-rules', UpdateScalingRule);
+router.patch('/scaling-rules/:id', UpdateScalingRule);
 router.get('/scaling-rules', ListScalingRules);
+router.get('/scaling-rules/:id', GetScalingRule);
+router.delete('/scaling-rules/:id', DeleteScalingRule);
 
 router.delete('/jobs', adminOnly, ClearJobs);
 router.post('/users', adminOnly, CreateUser);
@@ -82,5 +92,9 @@ router.all('*', CatchAll);
 export default {
 	fetch: async (request: Request, env: Env, ctx: any) => {
 		return router.handle(request, env, ctx).then(corsify);
+	},
+
+	scheduled: async (event: ScheduledEvent, env: Env, ctx: ExecutionContext) => {
+		return evaluateAllScalingRules(env);
 	},
 };

@@ -54,6 +54,7 @@ function dbJobToAPIJob(job: DBJob): APIJobResponse {
 	apiJob.completed = job.completed ? new Date(job.completed) : undefined;
 	apiJob.failed = job.failed ? new Date(job.failed) : undefined;
 	apiJob.canceled = job.canceled ? new Date(job.canceled) : undefined;
+	apiJob.heartbeat = job.heartbeat ? new Date(job.heartbeat) : undefined;
 	apiJob.arguments = job.arguments ? JSON.parse(job.arguments) : [];
 	apiJob.environment = job.environment ? JSON.parse(job.environment) : {};
 	return apiJob as APIJobResponse;

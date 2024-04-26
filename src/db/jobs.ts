@@ -42,11 +42,11 @@ export async function getHighestPriorityJob(env: Env, userId: string, containerG
 SELECT *
 FROM Jobs
 WHERE status = 'running' AND user_id = ? AND container_group_id = ? AND (
-		heartbeat < datetime('now', '-' || 2 * heartbeat_interval || ' seconds')
+		heartbeat <= datetime('now', '-' || (2 * heartbeat_interval) || ' seconds')
 		OR
-		(heartbeat IS NULL AND created < datetime('now', '-' || 2 * heartbeat_interval || ' seconds'))
+		(heartbeat IS NULL AND created <= datetime('now', '-' || (2 * heartbeat_interval) || ' seconds'))
 )
-ORDER BY heartbeat
+ORDER BY created ASC
 LIMIT 1 OFFSET ?;`
 	)
 		.bind(userId, containerGroup, num)
@@ -55,12 +55,13 @@ LIMIT 1 OFFSET ?;`
 		const job = runningResults[0] as unknown as DBJob;
 		return job;
 	}
+	console.log('No running jobs found');
 	const { results: pendingResults } = await env.DB.prepare(
 		`
 SELECT *
 FROM Jobs
 WHERE status = 'pending' AND user_id = ? AND container_group_id = ?
-ORDER BY heartbeat
+ORDER BY created ASC
 LIMIT 1 OFFSET ?;`
 	)
 		.bind(userId, containerGroup, num)
@@ -161,4 +162,27 @@ export async function getFailedAttempts(jobId: string, userId: string, env: Env)
 
 export async function clearJobs(env: Env): Promise<void> {
 	await env.DB.prepare('DELETE FROM Jobs').run();
+}
+
+export async function countActiveAndRecentlyActiveJobsInContainerGroup(
+	containerGroupId: string,
+	maxCount: number,
+	idleThreshold: number,
+	env: Env
+): Promise<number> {
+	const query = `
+SELECT COUNT(*)
+FROM (
+	SELECT 1 FROM Jobs
+	WHERE container_group_id = ? AND (
+		status = "running" OR 
+		status = "pending" OR
+		completed >= datetime('now', '-' || ? || ' seconds') OR
+		failed >= datetime('now', '-' || ? || ' seconds') OR
+		canceled >= datetime('now', '-' || ? || ' seconds')
+	LIMIT ?
+)
+	`;
+	const { results } = await env.DB.prepare(query).bind(containerGroupId, maxCount).all();
+	return results[0]['COUNT(*)'] as number;
 }

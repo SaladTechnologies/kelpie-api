@@ -1,6 +1,8 @@
 import { expect, it, describe, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { adminToken, clearJobs, clearUsers, createUser } from '../utils/test';
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 let user: any;
 let token: string;
 beforeAll(async () => {
@@ -232,7 +234,12 @@ describe('POST /jobs/:id/heartbeat', () => {
 
 	it('Updates a job heartbeat', async () => {
 		const jobResp = await queueJob();
-		const { id } = (await jobResp.json()) as any;
+		const { id, container_group_id } = (await jobResp.json()) as any;
+		await fetch(`http://localhost:8787/work?machine_id=testmachine&container_group_id=${container_group_id}`, {
+			headers: {
+				'X-Kelpie-Key': token,
+			},
+		});
 
 		const response = await fetch(`http://localhost:8787/jobs/${id}/heartbeat`, {
 			method: 'POST',
@@ -264,6 +271,31 @@ describe('GET /work', () => {
 	it('Gets the next job to work on', async () => {
 		const resp = await queueJob();
 		const queuedJob = (await resp.json()) as any;
+		const workResp = await fetch(`http://localhost:8787/work?machine_id=testmachine&container_group_id=${queuedJob.container_group_id}`, {
+			headers: {
+				'X-Kelpie-Key': token,
+			},
+		});
+		expect(workResp.status).toEqual(200);
+		const jobs = (await workResp.json()) as any[];
+		expect(jobs).toHaveLength(1);
+		const job = jobs[0];
+
+		expect(job.status).toEqual('running');
+		expect(job.id).toEqual(queuedJob.id);
+	});
+
+	it('Gets a stalled running job first', async () => {
+		const resp = await queueJob({ heartbeat_interval: 1 });
+		const queuedJob = (await resp.json()) as any;
+		await fetch(`http://localhost:8787/work?machine_id=testmachine&container_group_id=${queuedJob.container_group_id}`, {
+			headers: {
+				'X-Kelpie-Key': token,
+			},
+		});
+
+		await sleep(2000);
+
 		const workResp = await fetch(`http://localhost:8787/work?machine_id=testmachine&container_group_id=${queuedJob.container_group_id}`, {
 			headers: {
 				'X-Kelpie-Key': token,
