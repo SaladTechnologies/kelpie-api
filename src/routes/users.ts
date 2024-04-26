@@ -1,7 +1,7 @@
 import { OpenAPIRoute, Path } from '@cloudflare/itty-router-openapi';
 import { error } from '../utils/error';
 import { AuthedRequest, Env } from '../types';
-import { createUser, getUserById, getUserByUsername, clearAllNonAdminUsers } from '../utils/db';
+import { createUser, getUserById, getUserByUsername, clearAllNonAdminUsers } from '../db/users';
 
 export class CreateUser extends OpenAPIRoute {
 	static schema = {

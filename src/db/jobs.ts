@@ -1,8 +1,4 @@
-import { Env, DBJob, DBUser } from '../types';
-
-/**
- * Job functions
- */
+import { Env, DBJob } from '../types';
 
 function generateJobInsertStatement(job: DBJob): string {
 	const keys = Object.keys(job);
@@ -46,11 +42,11 @@ export async function getHighestPriorityJob(env: Env, userId: string, containerG
 SELECT *
 FROM Jobs
 WHERE status = 'running' AND user_id = ? AND container_group_id = ? AND (
-		heartbeat < datetime('now', '-' || 2 * heartbeat_interval || ' seconds')
+		heartbeat <= datetime('now', '-' || (2 * heartbeat_interval) || ' seconds')
 		OR
-		(heartbeat IS NULL AND created < datetime('now', '-' || 2 * heartbeat_interval || ' seconds'))
+		(heartbeat IS NULL AND created <= datetime('now', '-' || (2 * heartbeat_interval) || ' seconds'))
 )
-ORDER BY heartbeat
+ORDER BY created ASC
 LIMIT 1 OFFSET ?;`
 	)
 		.bind(userId, containerGroup, num)
@@ -59,12 +55,13 @@ LIMIT 1 OFFSET ?;`
 		const job = runningResults[0] as unknown as DBJob;
 		return job;
 	}
+	console.log('No running jobs found');
 	const { results: pendingResults } = await env.DB.prepare(
 		`
 SELECT *
 FROM Jobs
 WHERE status = 'pending' AND user_id = ? AND container_group_id = ?
-ORDER BY heartbeat
+ORDER BY created ASC
 LIMIT 1 OFFSET ?;`
 	)
 		.bind(userId, containerGroup, num)
@@ -167,32 +164,26 @@ export async function clearJobs(env: Env): Promise<void> {
 	await env.DB.prepare('DELETE FROM Jobs').run();
 }
 
-/**
- * User functions
- */
-
-export async function createUser(env: Env, username: string): Promise<string> {
-	const id = crypto.randomUUID();
-	await env.DB.prepare('INSERT INTO Users (id, username) VALUES (?, ?)').bind(id, username).run();
-	return id;
-}
-
-export async function getUserById(env: Env, id: string): Promise<DBUser | null> {
-	const { results } = await env.DB.prepare('SELECT * FROM Users WHERE id = ?').bind(id).all();
-	if (!results.length) {
-		return null;
-	}
-	return results[0] as unknown as DBUser;
-}
-
-export async function getUserByUsername(env: Env, username: string): Promise<DBUser | null> {
-	const { results } = await env.DB.prepare('SELECT id FROM Users WHERE username = ?').bind(username).all();
-	if (!results.length) {
-		return null;
-	}
-	return results[0] as unknown as DBUser;
-}
-
-export async function clearAllNonAdminUsers(env: Env): Promise<void> {
-	await env.DB.prepare('DELETE FROM Users WHERE id != ?').bind(env.ADMIN_ID).run();
+export async function countActiveAndRecentlyActiveJobsInContainerGroup(
+	containerGroupId: string,
+	maxCount: number,
+	idleThreshold: number,
+	env: Env
+): Promise<number> {
+	const query = `
+SELECT COUNT(*)
+FROM (
+	SELECT 1 FROM Jobs
+	WHERE container_group_id = ? AND (
+		status = "running" OR 
+		status = "pending" OR
+		completed >= datetime('now', '-' || ? || ' seconds') OR
+		failed >= datetime('now', '-' || ? || ' seconds') OR
+		canceled >= datetime('now', '-' || ? || ' seconds')
+	)
+LIMIT ?
+)
+	`;
+	const { results } = await env.DB.prepare(query).bind(containerGroupId, idleThreshold, idleThreshold, idleThreshold, maxCount).all();
+	return results[0]['COUNT(*)'] as number;
 }

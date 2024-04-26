@@ -1,4 +1,4 @@
-import { Env, SaladContainerGroup, ListContainerGroupsResponse } from '../types';
+import { Env, SaladContainerGroup, ListContainerGroupsResponse, InstanceList } from '../types';
 
 const saladBaseUrl = 'https://api.salad.com/api/public';
 
@@ -54,4 +54,96 @@ export async function reallocateInstance(
 		console.log(`Failed to reallocate instance: ${response.status}`);
 		console.log(await response.text());
 	}
+}
+
+export async function stopContainerGroup(env: Env, orgName: string, projectName: string, containerGroupName: string): Promise<void> {
+	const url = `https://api.salad.com/api/public/organizations/${orgName}/projects/${projectName}/containers/${containerGroupName}/stop`;
+	const stopResponse = await fetch(url, {
+		method: 'POST',
+		headers: {
+			'Salad-Api-Key': env.SALAD_API_KEY,
+		},
+	});
+	if (!stopResponse.ok) {
+		throw new Error(`Failed to stop container group: ${stopResponse.status}: ${stopResponse.statusText}`);
+	}
+	return;
+}
+
+export async function startContainerGroup(env: Env, orgName: string, projectName: string, containerGroupName: string): Promise<void> {
+	const url = `https://api.salad.com/api/public/organizations/${orgName}/projects/${projectName}/containers/${containerGroupName}/start`;
+	const startResponse = await fetch(url, {
+		method: 'POST',
+		headers: {
+			'Salad-Api-Key': env.SALAD_API_KEY,
+		},
+	});
+	if (!startResponse.ok) {
+		throw new Error(`Failed to start container group: ${startResponse.status}: ${startResponse.statusText}`);
+	}
+	return;
+}
+
+export async function listContainerGroupInstances(
+	env: Env,
+	orgName: string,
+	projectName: string,
+	containerGroupName: string
+): Promise<InstanceList> {
+	const url = `https://api.salad.com/api/public/organizations/${orgName}/projects/${projectName}/containers/${containerGroupName}/instances`;
+	const response = await fetch(url, {
+		headers: {
+			'Salad-Api-Key': env.SALAD_API_KEY,
+		},
+	});
+	if (!response.ok) {
+		throw new Error(`Failed to list container group instances: ${response.status}: ${response.statusText}`);
+	}
+	const data = (await response.json()) as InstanceList;
+	return data;
+}
+
+export async function setContainerGroupReplicas(
+	env: Env,
+	orgName: string,
+	projectName: string,
+	containerGroupName: string,
+	numReplicas: number
+): Promise<void> {
+	const url = `https://api.salad.com/api/public/organizations/${orgName}/projects/${projectName}/containers/${containerGroupName}`;
+	const response = await fetch(url, {
+		method: 'PATCH',
+		headers: {
+			'Content-Type': 'application/merge-patch+json',
+			Accept: 'application/merge-patch+json',
+			'Salad-Api-Key': env.SALAD_API_KEY,
+		},
+		body: JSON.stringify({ replicas: numReplicas }),
+	});
+	if (!response.ok) {
+		throw new Error(`Failed to set container group replicas: ${response.status}: ${response.statusText}`);
+	}
+	return;
+}
+
+export async function getContainerGroupByName(
+	env: Env,
+	orgName: string,
+	projectName: string,
+	containerGroupName: string
+): Promise<SaladContainerGroup | null> {
+	const url = `https://api.salad.com/api/public/organizations/${orgName}/projects/${projectName}/containers/${containerGroupName}`;
+	const response = await fetch(url, {
+		headers: {
+			'Salad-Api-Key': env.SALAD_API_KEY,
+		},
+	});
+	if (!response.ok) {
+		if (response.status === 404) {
+			return null;
+		}
+		throw new Error(`Failed to get container group: ${response.status}: ${response.statusText}`);
+	}
+	const data = (await response.json()) as SaladContainerGroup;
+	return data;
 }

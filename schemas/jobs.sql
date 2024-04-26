@@ -37,3 +37,7 @@ WHERE
 CREATE INDEX idx_pending_jobs ON Jobs (status, user_id, container_group_id, created)
 WHERE
   status = 'pending';
+
+CREATE INDEX idx_container_group_id ON Jobs (status, container_group_id)
+WHERE
+  status = 'running' OR status = 'pending';

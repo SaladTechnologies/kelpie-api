@@ -60,8 +60,8 @@ export const APIJobSubmissionSchema = z.object({
 	checkpoint_prefix: z.string(),
 	output_bucket: z.string(),
 	output_prefix: z.string(),
-	max_failures: z.number().optional().default(3),
-	heartbeat_interval: z.number().optional().default(30),
+	max_failures: z.number().int().optional().default(3),
+	heartbeat_interval: z.number().int().optional().default(30),
 	webhook: z.string().optional(),
 	container_group_id: z.string(),
 });
@@ -85,6 +85,29 @@ export const APIJobMetaData = z.object({
 export const APIJobResponseSchema = APIJobMetaData.merge(APIJobSubmissionSchema);
 
 export type APIJobResponse = z.infer<typeof APIJobResponseSchema>;
+
+export const APIScalingRuleSchema = z.object({
+	container_group_id: z.string().uuid(),
+	min_replicas: z.number().int().min(0).max(250),
+	max_replicas: z.number().int().min(0).max(250),
+	idle_threshold_seconds: z.number().int().min(0).max(3600),
+});
+
+export type APIScalingRule = z.infer<typeof APIScalingRuleSchema>;
+
+export const APIScalingRuleUpdateSchema = APIScalingRuleSchema.partial();
+export type APIScalingRuleUpdate = z.infer<typeof APIScalingRuleUpdateSchema>;
+
+export const APIScalingRuleResponseSchema = APIScalingRuleSchema.merge(
+	z.object({
+		org_name: z.string(),
+		project_name: z.string(),
+		container_group_name: z.string(),
+		user_id: z.string().uuid(),
+		created: z.date(),
+		updated: z.date().optional(),
+	})
+);
 
 export interface AuthedRequest extends Request {
 	userId?: string;
@@ -154,3 +177,27 @@ export interface DBUser {
 	username: string;
 	created: Date;
 }
+
+export interface DBScalingRule {
+	container_group_id: string;
+	org_name: string;
+	project_name: string;
+	container_group_name: string;
+	user_id: string;
+	created?: Date;
+	updated?: Date;
+	min_replicas: number;
+	max_replicas: number;
+	idle_threshold_seconds: number;
+}
+
+export type Instance = {
+	machine_id: string;
+	state: 'allocating' | 'creating' | 'running' | 'downloading';
+	update_time: string;
+	version: number;
+};
+
+export type InstanceList = {
+	instances: Instance[];
+};

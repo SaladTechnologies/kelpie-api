@@ -21,7 +21,7 @@ import {
 	incrementFailedAttempts,
 	listJobsWithArbitraryFilter,
 	clearJobs,
-} from '../utils/db';
+} from '../db/jobs';
 import { reallocateInstance, getContainerGroupByID } from '../utils/salad';
 
 const queueJobDocs = `
@@ -54,6 +54,7 @@ function dbJobToAPIJob(job: DBJob): APIJobResponse {
 	apiJob.completed = job.completed ? new Date(job.completed) : undefined;
 	apiJob.failed = job.failed ? new Date(job.failed) : undefined;
 	apiJob.canceled = job.canceled ? new Date(job.canceled) : undefined;
+	apiJob.heartbeat = job.heartbeat ? new Date(job.heartbeat) : undefined;
 	apiJob.arguments = job.arguments ? JSON.parse(job.arguments) : [];
 	apiJob.environment = job.environment ? JSON.parse(job.environment) : {};
 	return apiJob as APIJobResponse;
@@ -633,7 +634,6 @@ export class ListJobs extends OpenAPIRoute {
 		}
 
 		try {
-			console.log(filter);
 			const jobs = await listJobsWithArbitraryFilter(filter, data.query.asc, data.query.page_size, data.query.page, env);
 			return {
 				_count: jobs.length,
