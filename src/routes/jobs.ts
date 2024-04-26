@@ -634,7 +634,6 @@ export class ListJobs extends OpenAPIRoute {
 		}
 
 		try {
-			console.log(filter);
 			const jobs = await listJobsWithArbitraryFilter(filter, data.query.asc, data.query.page_size, data.query.page, env);
 			return {
 				_count: jobs.length,

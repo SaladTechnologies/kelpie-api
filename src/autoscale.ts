@@ -44,6 +44,8 @@ export async function setReplicasForContainerGroup(
 		console.log(`Stopping container group ${containerGroupName}`);
 		await stopContainerGroup(env, orgName, projectName, containerGroupName);
 		return;
+	} else if (numReplicas === 0) {
+		return;
 	} else if (numReplicas > 0 && group.current_state.status === 'stopped') {
 		console.log(`Starting container group ${containerGroupName}`);
 		await startContainerGroup(env, orgName, projectName, containerGroupName);

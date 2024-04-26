@@ -180,9 +180,10 @@ FROM (
 		completed >= datetime('now', '-' || ? || ' seconds') OR
 		failed >= datetime('now', '-' || ? || ' seconds') OR
 		canceled >= datetime('now', '-' || ? || ' seconds')
-	LIMIT ?
+	)
+LIMIT ?
 )
 	`;
-	const { results } = await env.DB.prepare(query).bind(containerGroupId, maxCount).all();
+	const { results } = await env.DB.prepare(query).bind(containerGroupId, idleThreshold, idleThreshold, idleThreshold, maxCount).all();
 	return results[0]['COUNT(*)'] as number;
 }
