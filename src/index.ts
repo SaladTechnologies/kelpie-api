@@ -28,7 +28,7 @@ import { evaluateAllScalingRules } from './autoscale';
 const router = OpenAPIRouter({
 	schema: {
 		info: {
-			title: '🐶 Kelpie Job Runner API',
+			title: '🐕 Kelpie API',
 			description: 'API for running long jobs on Salad',
 			version: '0.2.0',
 		},

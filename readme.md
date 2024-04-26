@@ -1,7 +1,7 @@
 ![](./kelpie.png)
-# Kelpie API
+# 🐕 Kelpie API
 
-kelpie is a workload-agnostic framework for shepherding long-running jobs to completion across a Salad Container Group, which consists of interruptible nodes.
+`kelpie` is a workload-agnostic framework for shepherding long-running jobs to completion across a Salad Container Group, which consists of interruptible nodes.
 
 ## Swagger Docs
 
