@@ -43,7 +43,7 @@ In particular, we recommend choosing a provider with no egress fees, such as [Cl
 | \`output_prefix\`     | string   | Prefix for output files in the S3 bucket. | **required** |
 | \`max_failures\`      | integer  | Maximum number of allowed failures before the job is marked failed. | 3 |
 | \`heartbeat_interval\`| integer | Time interval (in seconds) for sending heartbeat signals. | 30 |
-| \`webhook\`           | string   | URL for the webhook to notify upon completion or failure. | **required** |
+| \`webhook\`           | string   | URL for the webhook to notify upon completion or failure. | *optional* |
 | \`container_group_id\`| string  | ID of the container group where the command will be executed. | **required** |
 `;
 
