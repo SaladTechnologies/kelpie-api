@@ -48,6 +48,7 @@ export interface DBJob {
 	heartbeat_interval: number; // INT, default 30
 	webhook?: string; // Optional TEXT
 	container_group_id: string; // TEXT
+	compression?: number; // Optional INT 0 or 1
 }
 
 export const APIJobSubmissionSchema = z.object({
@@ -64,6 +65,7 @@ export const APIJobSubmissionSchema = z.object({
 	heartbeat_interval: z.number().int().optional().default(30),
 	webhook: z.string().optional(),
 	container_group_id: z.string(),
+	compression: z.boolean().optional().default(false),
 });
 
 export type APIJobSubmission = z.infer<typeof APIJobSubmissionSchema>;

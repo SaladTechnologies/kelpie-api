@@ -57,6 +57,7 @@ function dbJobToAPIJob(job: DBJob): APIJobResponse {
 	apiJob.heartbeat = job.heartbeat ? new Date(job.heartbeat) : undefined;
 	apiJob.arguments = job.arguments ? JSON.parse(job.arguments) : [];
 	apiJob.environment = job.environment ? JSON.parse(job.environment) : {};
+	apiJob.compression = !!job.compression;
 	return apiJob as APIJobResponse;
 }
 
@@ -103,6 +104,7 @@ export class CreateJob extends OpenAPIRoute {
 				...body,
 				arguments: JSON.stringify(body.arguments),
 				environment: JSON.stringify(body.environment),
+				compression: body.compression ? 1 : 0,
 			};
 			if (!jobToInsert.input_prefix.endsWith('/')) {
 				jobToInsert.input_prefix += '/';
