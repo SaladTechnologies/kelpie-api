@@ -6,6 +6,9 @@ compatibility_flags = ["nodejs_compat"]
 [placement]
 mode = "smart"
 
+[triggers]
+crons = ["*/5 * * * *"] # * * * * * = run every 5 minutes
+
 # Variable bindings. These are arbitrary, plaintext strings (similar to environment variables)
 # Note: Use secrets to store sensitive data.
 # Docs: https://developers.cloudflare.com/workers/platform/environment-variables
