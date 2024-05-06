@@ -49,6 +49,7 @@ export interface DBJob {
 	webhook?: string; // Optional TEXT
 	container_group_id: string; // TEXT
 	compression?: number; // Optional INT 0 or 1
+	num_heartbeats?: number; // INT, default 0
 }
 
 export const APIJobSubmissionSchema = z.object({
@@ -82,6 +83,7 @@ export const APIJobMetaData = z.object({
 	heartbeat: z.date().optional(),
 	num_failures: z.number().default(0),
 	machine_id: z.string().optional(),
+	num_heartbeats: z.number().default(0),
 });
 
 export const APIJobResponseSchema = APIJobMetaData.merge(APIJobSubmissionSchema);

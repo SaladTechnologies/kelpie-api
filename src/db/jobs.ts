@@ -116,7 +116,9 @@ export async function updateJobHeartbeat(id: string, userId: string, env: Env): 
 		return currentStatus;
 	}
 
-	await env.DB.prepare("UPDATE Jobs SET heartbeat = datetime('now') WHERE id = ? AND status = 'running' AND user_id = ?")
+	await env.DB.prepare(
+		"UPDATE Jobs SET heartbeat = datetime('now'), num_heartbeats = num_heartbeats + 1 WHERE id = ? AND status = 'running' AND user_id = ?"
+	)
 		.bind(id, userId)
 		.run();
 

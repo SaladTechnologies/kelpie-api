@@ -1,0 +1,1 @@
+ALTER TABLE Jobs ADD COLUMN num_heartbeats INT NOT NULL DEFAULT 0;
