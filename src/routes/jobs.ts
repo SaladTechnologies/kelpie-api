@@ -136,6 +136,9 @@ export class CreateJob extends OpenAPIRoute {
 					if (!sync.prefix.endsWith('/')) {
 						sync.prefix += '/';
 					}
+					if (sync.direction !== 'download') {
+						return error(400, { error: 'Invalid request', message: 'sync.before.direction must be "download"' });
+					}
 				}
 			}
 			if (body.sync.during && body.sync.during.length > 0) {
@@ -143,12 +146,18 @@ export class CreateJob extends OpenAPIRoute {
 					if (!sync.prefix.endsWith('/')) {
 						sync.prefix += '/';
 					}
+					if (sync.direction !== 'upload') {
+						return error(400, { error: 'Invalid request', message: 'sync.during.direction must be "upload"' });
+					}
 				}
 			}
 			if (body.sync.after && body.sync.after.length > 0) {
 				for (const sync of body.sync.after) {
 					if (!sync.prefix.endsWith('/')) {
 						sync.prefix += '/';
+					}
+					if (sync.direction !== 'upload') {
+						return error(400, { error: 'Invalid request', message: 'sync.after.direction must be "upload"' });
 					}
 				}
 			}

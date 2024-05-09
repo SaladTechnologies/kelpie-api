@@ -57,7 +57,8 @@ export const SyncConfigSchema = z.object({
 	bucket: z.string(),
 	prefix: z.string(),
 	local_path: z.string(),
-	direction: z.enum(['download', 'upload', 'both']),
+	direction: z.enum(['download', 'upload']),
+	pattern: z.string().optional(),
 });
 
 export type SyncConfig = z.infer<typeof SyncConfigSchema>;
@@ -72,8 +73,8 @@ export const APIJobSubmissionSchema = z.object({
 	checkpoint_prefix: z.string().optional(),
 	output_bucket: z.string().optional(),
 	output_prefix: z.string().optional(),
-	max_failures: z.number().int().optional().default(3),
-	heartbeat_interval: z.number().int().optional().default(30),
+	max_failures: z.number().int().min(1).optional().default(3),
+	heartbeat_interval: z.number().int().min(1).optional().default(30),
 	webhook: z.string().optional(),
 	container_group_id: z.string(),
 	compression: z.boolean().optional().default(false),
