@@ -58,6 +58,15 @@ function dbJobToAPIJob(job: DBJob): APIJobResponse {
 	apiJob.arguments = job.arguments ? JSON.parse(job.arguments) : [];
 	apiJob.environment = job.environment ? JSON.parse(job.environment) : {};
 	apiJob.compression = !!job.compression;
+	if (job.sync) {
+		apiJob.sync = JSON.parse(job.sync);
+		delete apiJob.input_bucket;
+		delete apiJob.input_prefix;
+		delete apiJob.checkpoint_bucket;
+		delete apiJob.checkpoint_prefix;
+		delete apiJob.output_bucket;
+		delete apiJob.output_prefix;
+	}
 	return apiJob as APIJobResponse;
 }
 
@@ -95,6 +104,55 @@ export class CreateJob extends OpenAPIRoute {
 		if (!userId) {
 			return error(400, { error: 'User Required', message: 'No user ID found' });
 		}
+		// Only use sync OR legacy bucket/prefix
+		if (
+			body.sync &&
+			(body.input_bucket ||
+				body.checkpoint_bucket ||
+				body.output_bucket ||
+				body.input_prefix ||
+				body.checkpoint_prefix ||
+				body.output_prefix)
+		) {
+			return error(400, { error: 'Invalid request', message: 'Cannot use both sync and bucket/prefix' });
+		}
+
+		// Must use sync OR legacy bucket/prefix
+		if (
+			!body.sync &&
+			(!body.input_bucket ||
+				!body.checkpoint_bucket ||
+				!body.output_bucket ||
+				!body.input_prefix ||
+				!body.checkpoint_prefix ||
+				!body.output_prefix)
+		) {
+			return error(400, { error: 'Invalid request', message: 'Must use either sync or bucket/prefix' });
+		}
+
+		if (body.sync) {
+			if (body.sync.before && body.sync.before.length > 0) {
+				for (const sync of body.sync.before) {
+					if (!sync.prefix.endsWith('/')) {
+						sync.prefix += '/';
+					}
+				}
+			}
+			if (body.sync.during && body.sync.during.length > 0) {
+				for (const sync of body.sync.during) {
+					if (!sync.prefix.endsWith('/')) {
+						sync.prefix += '/';
+					}
+				}
+			}
+			if (body.sync.after && body.sync.after.length > 0) {
+				for (const sync of body.sync.after) {
+					if (!sync.prefix.endsWith('/')) {
+						sync.prefix += '/';
+					}
+				}
+			}
+		}
 		try {
 			const jobToInsert: DBJob = {
 				id: crypto.randomUUID(),
@@ -105,14 +163,21 @@ export class CreateJob extends OpenAPIRoute {
 				arguments: JSON.stringify(body.arguments),
 				environment: JSON.stringify(body.environment),
 				compression: body.compression ? 1 : 0,
+				sync: body.sync ? JSON.stringify(body.sync) : undefined,
+				input_bucket: body.input_bucket || '',
+				input_prefix: body.input_prefix || '',
+				checkpoint_bucket: body.checkpoint_bucket || '',
+				checkpoint_prefix: body.checkpoint_prefix || '',
+				output_bucket: body.output_bucket || '',
+				output_prefix: body.output_prefix || '',
 			};
-			if (!jobToInsert.input_prefix.endsWith('/')) {
+			if (jobToInsert.input_prefix.length && !jobToInsert.input_prefix.endsWith('/')) {
 				jobToInsert.input_prefix += '/';
 			}
-			if (!jobToInsert.checkpoint_prefix.endsWith('/')) {
+			if (jobToInsert.checkpoint_prefix.length && !jobToInsert.checkpoint_prefix.endsWith('/')) {
 				jobToInsert.checkpoint_prefix += '/';
 			}
-			if (!jobToInsert.output_prefix.endsWith('/')) {
+			if (jobToInsert.output_prefix.length && !jobToInsert.output_prefix.endsWith('/')) {
 				jobToInsert.output_prefix += '/';
 			}
 
