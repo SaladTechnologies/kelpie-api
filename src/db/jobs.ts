@@ -13,7 +13,7 @@ function generateJobInsertStatement(job: DBJob): string {
 
 export async function createNewJob(job: DBJob, env: Env): Promise<DBJob | null> {
 	await env.DB.prepare(generateJobInsertStatement(job))
-		.bind(...Object.values(job))
+		.bind(...Object.values(job).map((v) => (typeof v === 'undefined' ? null : v)))
 		.all();
 	return getJobByID(job.id!, env);
 }

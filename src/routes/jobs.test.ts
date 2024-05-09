@@ -70,6 +70,48 @@ describe('POST /jobs', () => {
 		expect(id).toBeDefined();
 		expect(status).toEqual('pending');
 	});
+
+	it('Supports the sync object', async () => {
+		const response = await fetch('http://localhost:8787/jobs', {
+			method: 'POST',
+			headers: {
+				'X-Kelpie-Key': token,
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({
+				command: 'python',
+				arguments: ['/app/main.py'],
+				container_group_id: 'testgroup',
+				sync: {
+					before: [
+						{
+							bucket: 'testbucket',
+							prefix: 'before/',
+							local_path: '/app/before',
+							direction: 'download',
+						},
+					],
+				},
+			}),
+		});
+
+		expect(response.status).toEqual(202);
+
+		const { id, status, sync, input_bucket } = (await response.json()) as any;
+		expect(id).toBeDefined();
+		expect(status).toEqual('pending');
+		expect(sync).toMatchObject({
+			before: [
+				{
+					bucket: 'testbucket',
+					prefix: 'before/',
+					local_path: '/app/before',
+					direction: 'download',
+				},
+			],
+		});
+		expect(input_bucket).toBeUndefined();
+	});
 });
 
 describe('GET /jobs', () => {

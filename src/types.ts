@@ -50,23 +50,41 @@ export interface DBJob {
 	container_group_id: string; // TEXT
 	compression?: number; // Optional INT 0 or 1
 	num_heartbeats?: number; // INT, default 0
+	sync?: string; // Optional TEXT, JSON string
 }
+
+export const SyncConfigSchema = z.object({
+	bucket: z.string(),
+	prefix: z.string(),
+	local_path: z.string(),
+	direction: z.enum(['download', 'upload']),
+	pattern: z.string().optional(),
+});
+
+export type SyncConfig = z.infer<typeof SyncConfigSchema>;
 
 export const APIJobSubmissionSchema = z.object({
 	command: z.string(),
 	arguments: z.string().array().default([]), // Default as an empty array
 	environment: z.record(z.string()).optional().default({}),
-	input_bucket: z.string(),
-	input_prefix: z.string(),
-	checkpoint_bucket: z.string(),
-	checkpoint_prefix: z.string(),
-	output_bucket: z.string(),
-	output_prefix: z.string(),
-	max_failures: z.number().int().optional().default(3),
-	heartbeat_interval: z.number().int().optional().default(30),
+	input_bucket: z.string().optional(),
+	input_prefix: z.string().optional(),
+	checkpoint_bucket: z.string().optional(),
+	checkpoint_prefix: z.string().optional(),
+	output_bucket: z.string().optional(),
+	output_prefix: z.string().optional(),
+	max_failures: z.number().int().min(1).optional().default(3),
+	heartbeat_interval: z.number().int().min(1).optional().default(30),
 	webhook: z.string().optional(),
 	container_group_id: z.string(),
 	compression: z.boolean().optional().default(false),
+	sync: z
+		.object({
+			before: SyncConfigSchema.array().optional(),
+			during: SyncConfigSchema.array().optional(),
+			after: SyncConfigSchema.array().optional(),
+		})
+		.optional(),
 });
 
 export type APIJobSubmission = z.infer<typeof APIJobSubmissionSchema>;
