@@ -30,21 +30,46 @@ Queue a new job to be executed by the specified container group. [Get your Conta
 Note that although we use the term "AWS S3 bucket" in the documentation, you can use any S3-compatible storage provider. 
 In particular, we recommend choosing a provider with no egress fees, such as [Cloudflare R2.](https://www.cloudflare.com/developer-platform/r2/)
 
+You must use either the \`sync\` object or the \`input_bucket\`, \`input_prefix\`, \`checkpoint_bucket\`, \`checkpoint_prefix\`, \`output_bucket\`, and \`output_prefix\` fields.
+You may not use both.
+
+**Body**
+
 | Key                 | Type     | Description        | Default |
 |---------------------|----------|--------------------|---------|
 | \`command\`           | string   | The command to execute. | **required** |
 | \`arguments\`         | array    | List of arguments for the command. | [] |
 | \`environment\`       | object   | Key-value pairs defining the environment variables. | {} |
-| \`input_bucket\`      | string   | Name of the AWS S3 bucket for input files. | **required** |
-| \`input_prefix\`      | string   | Prefix for input files in the S3 bucket. | **required** |
-| \`checkpoint_bucket\` | string   | Name of the AWS S3 bucket for checkpoint files. | **required** |
-| \`checkpoint_prefix\` | string   | Prefix for checkpoint files in the S3 bucket. | **required** |
-| \`output_bucket\`     | string   | Name of the AWS S3 bucket for output files. | **required** |
-| \`output_prefix\`     | string   | Prefix for output files in the S3 bucket. | **required** |
+| \`input_bucket\`      | string   | Name of the AWS S3 bucket for input files. | *optional* |
+| \`input_prefix\`      | string   | Prefix for input files in the S3 bucket. | *optional* |
+| \`checkpoint_bucket\` | string   | Name of the AWS S3 bucket for checkpoint files. | *optional* |
+| \`checkpoint_prefix\` | string   | Prefix for checkpoint files in the S3 bucket. | *optional* |
+| \`output_bucket\`     | string   | Name of the AWS S3 bucket for output files. | *optional* |
+| \`output_prefix\`     | string   | Prefix for output files in the S3 bucket. | *optional* |
 | \`max_failures\`      | integer  | Maximum number of allowed failures before the job is marked failed. | 3 |
 | \`heartbeat_interval\`| integer | Time interval (in seconds) for sending heartbeat signals. | 30 |
 | \`webhook\`           | string   | URL for the webhook to notify upon completion or failure. | *optional* |
 | \`container_group_id\`| string  | ID of the container group where the command will be executed. | **required** |
+| \`compression\` | boolean | If true, will gzip files it uploads to the bucket, appending the filename with .gz | false |
+| \`sync\` | object | Sync configuration for the job. | *optional* |
+
+**body.sync**
+
+| Key      | Type   | Description | Default |
+|----------|--------|-------------|---------|
+| \`before\` | SyncConfig[] | List of sync configurations to run before the job. | *optional* |
+| \`during\` | SyncConfig[] | List of sync configurations to run during the job. | *optional* |
+| \`after\`  | SyncConfig[] | List of sync configurations to run after the job, but before marking the job complete. | *optional* |
+
+**SyncConfig**
+
+| Key          | Type   | Description | Default |
+|--------------|--------|-------------|---------|
+| \`bucket\`     | string | Name of the AWS S3 bucket. | **required** |
+| \`prefix\`     | string | Prefix for files in the S3 bucket. | **required** |
+| \`local_path\` | string | Local path to sync files to/from. | **required** |
+| \`direction\`  | string | Direction of the sync. Must be "download" for \`before\`, and "upload" for \`during\` and \`after\` | **required** |
+| \`pattern\`    | string | An ECMAScript(javascript) Regular Expression. Filepaths/keys that match will be included in the sync. Default is to include all files. | *optional* |
 `;
 
 function dbJobToAPIJob(job: DBJob): APIJobResponse {
