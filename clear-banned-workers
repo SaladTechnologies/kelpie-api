@@ -1,0 +1,8 @@
+#! /usr/bin/env bash
+
+keys=$(npx wrangler kv:key list --binding banned_workers | jq -r '.[].name')
+json_array=$(echo "$keys" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+echo $json_array > keys-to-delete.json
+
+npx wrangler kv:bulk delete keys-to-delete.json --binding banned_workers
+rm keys-to-delete.json
