@@ -114,6 +114,107 @@ describe('POST /jobs', () => {
 	});
 });
 
+describe('POST /jobs/batch', () => {
+	beforeEach(clearJobs);
+	afterEach(clearJobs);
+
+	it('Queues multiple jobs', async () => {
+		const response = await fetch('http://localhost:8787/jobs/batch', {
+			method: 'POST',
+			headers: {
+				'X-Kelpie-Key': token,
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify([
+				{
+					command: 'python',
+					arguments: ['/app/main.py'],
+					container_group_id: 'testgroup',
+					sync: {
+						before: [
+							{
+								bucket: 'testbucket',
+								prefix: 'before/',
+								local_path: '/app/before',
+								direction: 'download',
+							},
+						],
+					},
+				},
+				{
+					command: 'python',
+					arguments: ['/app/main.py'],
+					container_group_id: 'testgroup',
+					sync: {
+						before: [
+							{
+								bucket: 'testbucket',
+								prefix: 'before/',
+								local_path: '/app/before',
+								direction: 'download',
+							},
+						],
+					},
+				},
+			]),
+		});
+
+		expect(response.status).toEqual(202);
+
+		const jobs = (await response.json()) as any[];
+		expect(jobs).toHaveLength(2);
+		jobs.forEach((job) => {
+			expect(job.id).toBeDefined();
+			expect(job.status).toEqual('pending');
+		});
+	});
+
+	it('Queues up to 1000 jobs at once', async () => {
+		const jobs = Array.from({ length: 1000 }, () => ({
+			command: 'python',
+			arguments: ['/app/main.py'],
+			container_group_id: 'testgroup',
+		}));
+
+		const response = await fetch('http://localhost:8787/jobs/batch', {
+			method: 'POST',
+			headers: {
+				'X-Kelpie-Key': token,
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify(jobs),
+		});
+
+		expect(response.status).toEqual(202);
+
+		const createdJobs = (await response.json()) as any[];
+		expect(createdJobs).toHaveLength(1000);
+		createdJobs.forEach((job) => {
+			expect(job.id).toBeDefined();
+			expect(job.status).toEqual('pending');
+		});
+	});
+
+	it('Rejects more than 1000 jobs at once', async () => {
+		const jobs = Array.from({ length: 1001 }, () => ({
+			command: 'python',
+			arguments: ['/app/main.py'],
+			container_group_id: 'testgroup',
+		}));
+
+		const response = await fetch('http://localhost:8787/jobs/batch', {
+			method: 'POST',
+			headers: {
+				'X-Kelpie-Key': token,
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify(jobs),
+		});
+
+		expect(response.status).toEqual(400);
+	});
+});
+
 describe('GET /jobs', () => {
 	beforeEach(clearJobs);
 	afterEach(clearJobs);
