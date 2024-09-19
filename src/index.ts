@@ -31,7 +31,7 @@ const router = OpenAPIRouter({
 		info: {
 			title: '🐕 Kelpie API',
 			description: 'API for running long jobs on Salad',
-			version: '0.5.0',
+			version: '0.6.0',
 		},
 	},
 });

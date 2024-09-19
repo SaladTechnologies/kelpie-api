@@ -248,7 +248,7 @@ export class CreateJob extends OpenAPIRoute {
 export class BatchCreateJobs extends OpenAPIRoute {
 	static schema = {
 		summary: 'Queue multiple jobs',
-		description: 'Queue multiple jobs to be executed by the specified container group',
+		description: `Queue multiple jobs in one request. Limit 1000 jobs per request.\n\n${queueJobDocs}`,
 		security: [{ apiKey: [] }],
 		requestBody: APIJobSubmissionSchema.array().min(1).max(1000),
 		responses: {
