@@ -174,6 +174,16 @@ describe('POST /jobs/batch', () => {
 			command: 'python',
 			arguments: ['/app/main.py'],
 			container_group_id: 'testgroup',
+			sync: {
+				before: [
+					{
+						bucket: 'testbucket',
+						prefix: 'before/',
+						local_path: '/app/before',
+						direction: 'download',
+					},
+				],
+			},
 		}));
 
 		const response = await fetch('http://localhost:8787/jobs/batch', {
@@ -185,9 +195,10 @@ describe('POST /jobs/batch', () => {
 			body: JSON.stringify(jobs),
 		});
 
+		const body = (await response.json()) as any;
 		expect(response.status).toEqual(202);
 
-		const createdJobs = (await response.json()) as any[];
+		const createdJobs = body as any[];
 		expect(createdJobs).toHaveLength(1000);
 		createdJobs.forEach((job) => {
 			expect(job.id).toBeDefined();

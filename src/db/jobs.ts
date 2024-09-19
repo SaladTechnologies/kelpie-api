@@ -18,6 +18,11 @@ export async function createNewJob(job: DBJob, env: Env): Promise<DBJob | null> 
 	return getJobByID(job.id!, env);
 }
 
+export async function batchCreateNewJobs(jobs: DBJob[], env: Env): Promise<Array<DBJob | null>> {
+	// prepared sql statements must be on only one statement for this db
+	return Promise.all(jobs.map((job) => createNewJob(job, env)));
+}
+
 export async function getJobByID(id: string, env: Env): Promise<DBJob | null> {
 	const { results } = await env.DB.prepare('SELECT * FROM Jobs WHERE id = ?').bind(id).all();
 	if (!results.length) {
@@ -25,6 +30,13 @@ export async function getJobByID(id: string, env: Env): Promise<DBJob | null> {
 	}
 	const job = results[0] as unknown as DBJob;
 	return job;
+}
+
+export async function batchGetJobsById(ids: string[], env: Env): Promise<DBJob[]> {
+	const { results } = await env.DB.prepare(`SELECT * FROM Jobs WHERE id IN (${ids.map(() => '?').join(', ')})`)
+		.bind(...ids)
+		.all();
+	return results as unknown[] as DBJob[];
 }
 
 export async function getJobByUserAndId(userId: string, jobId: string, env: Env): Promise<DBJob | null> {
@@ -177,7 +189,7 @@ SELECT COUNT(*)
 FROM (
 	SELECT 1 FROM Jobs
 	WHERE container_group_id = ? AND (
-		status = "running" OR 
+		status = "running" OR
 		status = "pending" OR
 		completed >= datetime('now', '-' || ? || ' seconds') OR
 		failed >= datetime('now', '-' || ? || ' seconds') OR

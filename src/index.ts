@@ -5,6 +5,7 @@ import { error } from './utils/error';
 import { validateAuth, adminOnly } from './middleware';
 import {
 	CreateJob,
+	BatchCreateJobs,
 	GetJob,
 	GetWork,
 	CancelJob,
@@ -48,6 +49,7 @@ router.registry.registerComponent('securitySchemes', 'apiKey', {
 });
 
 router.post('/jobs', CreateJob);
+router.post('/jobs/batch', BatchCreateJobs);
 router.get('/jobs', ListJobs);
 router.get('/jobs/:id', GetJob);
 router.delete('/jobs/:id', CancelJob);
