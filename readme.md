@@ -268,6 +268,9 @@ Webhooks sent by the Kelpie API will be secured with your API token in the `X-Ke
 2. run `npm install` to install dependencies
 3. Copy `example-wrangler.toml` to `wrangler.toml`.
 4. Run `npm start` to initiate the local environment and start the server
+5. Run `./setup-db.sh --local` to set up the local database
+
+Now navigate to the local server's swagger docs at `http://localhost:8787/docs`.
 
 ### Running Tests
 
