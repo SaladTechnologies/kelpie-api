@@ -272,4 +272,5 @@ Webhooks sent by the Kelpie API will be secured with your API token in the `X-Ke
 ### Running Tests
 
 1. Make sure the server is started with `npm start`
-2. Run `npm test` to run the test suite
+2. (Only the first time) Run `./setup-tests.sh` to set up the test environment
+3. Run `npm test` to run the test suite
