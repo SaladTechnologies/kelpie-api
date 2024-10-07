@@ -18,6 +18,20 @@ export async function createNewJob(job: DBJob, env: Env): Promise<DBJob | null> 
 	return getJobByID(job.id!, env);
 }
 
+export async function batchCreateNewJobs(jobs: DBJob[], env: Env): Promise<Array<DBJob | null>> {
+	// prepared sql statements must be on only one statement for this db
+	const jobIds = await Promise.all(
+		jobs.map(async (job) => {
+			await env.DB.prepare(generateJobInsertStatement(job))
+				.bind(...Object.values(job).map((v) => (typeof v === 'undefined' ? null : v)))
+				.all();
+			return job.id;
+		})
+	);
+
+	return batchGetJobsById(jobIds, env);
+}
+
 export async function getJobByID(id: string, env: Env): Promise<DBJob | null> {
 	const { results } = await env.DB.prepare('SELECT * FROM Jobs WHERE id = ?').bind(id).all();
 	if (!results.length) {
@@ -25,6 +39,22 @@ export async function getJobByID(id: string, env: Env): Promise<DBJob | null> {
 	}
 	const job = results[0] as unknown as DBJob;
 	return job;
+}
+
+export async function batchGetJobsById(ids: string[], env: Env): Promise<DBJob[]> {
+	// Chunk this 100 at a time, per D1 limits
+	const chunks = [];
+	for (let i = 0; i < ids.length; i += 100) {
+		chunks.push(ids.slice(i, i + 100));
+	}
+	const allResults: DBJob[] = [];
+	for (const chunk of chunks) {
+		const { results } = await env.DB.prepare(`SELECT * FROM Jobs WHERE id IN (${chunk.map(() => '?').join(', ')})`)
+			.bind(...chunk)
+			.all();
+		allResults.push(...(results as unknown as DBJob[]));
+	}
+	return allResults;
 }
 
 export async function getJobByUserAndId(userId: string, jobId: string, env: Env): Promise<DBJob | null> {
@@ -177,7 +207,7 @@ SELECT COUNT(*)
 FROM (
 	SELECT 1 FROM Jobs
 	WHERE container_group_id = ? AND (
-		status = "running" OR 
+		status = "running" OR
 		status = "pending" OR
 		completed >= datetime('now', '-' || ? || ' seconds') OR
 		failed >= datetime('now', '-' || ? || ' seconds') OR

@@ -259,3 +259,21 @@ Webhook status may be `running`, `failed`, or `completed`
 ### Webhook Authorization
 
 Webhooks sent by the Kelpie API will be secured with your API token in the `X-Kelpie-Key` header.
+
+## Developing Locally
+
+### Getting Started
+
+1. Clone the repo
+2. run `npm install` to install dependencies
+3. Copy `example-wrangler.toml` to `wrangler.toml`.
+4. Run `npm start` to initiate the local environment and start the server
+5. Run `./setup-db.sh --local` to set up the local database
+
+Now navigate to the local server's swagger docs at `http://localhost:8787/docs`.
+
+### Running Tests
+
+1. Make sure the server is started with `npm start`
+2. (Only the first time) Run `./setup-tests.sh` to set up the test environment
+3. Run `npm test` to run the test suite

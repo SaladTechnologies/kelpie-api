@@ -54,7 +54,6 @@ describe('POST /scaling-rules', () => {
 			body: JSON.stringify(rule),
 		});
 		const createdRule = (await response.json()) as any;
-		console.log(createdRule);
 		expect(response.status).toEqual(201);
 
 		expect(createdRule).toMatchObject({ ...rule, org_name: 'testorg', project_name: 'testproject', user_id: user.id });

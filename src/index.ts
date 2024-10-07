@@ -5,6 +5,7 @@ import { error } from './utils/error';
 import { validateAuth, adminOnly } from './middleware';
 import {
 	CreateJob,
+	BatchCreateJobs,
 	GetJob,
 	GetWork,
 	CancelJob,
@@ -30,7 +31,7 @@ const router = OpenAPIRouter({
 		info: {
 			title: '🐕 Kelpie API',
 			description: 'API for running long jobs on Salad',
-			version: '0.5.0',
+			version: '0.6.0',
 		},
 	},
 });
@@ -48,6 +49,7 @@ router.registry.registerComponent('securitySchemes', 'apiKey', {
 });
 
 router.post('/jobs', CreateJob);
+router.post('/jobs/batch', BatchCreateJobs);
 router.get('/jobs', ListJobs);
 router.get('/jobs/:id', GetJob);
 router.delete('/jobs/:id', CancelJob);

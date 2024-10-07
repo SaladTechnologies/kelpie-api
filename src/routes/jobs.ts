@@ -13,6 +13,7 @@ import {
 } from '../types';
 import {
 	createNewJob,
+	batchCreateNewJobs,
 	getJobByUserAndId,
 	getJobByID,
 	getHighestPriorityJob,
@@ -27,7 +28,7 @@ import { reallocateInstance, getContainerGroupByID } from '../utils/salad';
 const queueJobDocs = `
 Queue a new job to be executed by the specified container group. [Get your Container Group ID](https://docs.salad.com/reference/get_container_group)
 
-Note that although we use the term "AWS S3 bucket" in the documentation, you can use any S3-compatible storage provider. 
+Note that although we use the term "AWS S3 bucket" in the documentation, you can use any S3-compatible storage provider.
 In particular, we recommend choosing a provider with no egress fees, such as [Cloudflare R2.](https://www.cloudflare.com/developer-platform/r2/)
 
 You must use either the \`sync\` object or the \`input_bucket\`, \`input_prefix\`, \`checkpoint_bucket\`, \`checkpoint_prefix\`, \`output_bucket\`, and \`output_prefix\` fields.
@@ -72,7 +73,10 @@ You may not use both.
 | \`pattern\`    | string | An ECMAScript(javascript) Regular Expression. Filepaths/keys that match will be included in the sync. Default is to include all files. | *optional* |
 `;
 
-function dbJobToAPIJob(job: DBJob): APIJobResponse {
+function dbJobToAPIJob(job: DBJob | null): APIJobResponse {
+	if (!job) {
+		throw new Error('Job not found');
+	}
 	const apiJob: any = { ...job };
 	apiJob.created = job.created ? new Date(job.created) : undefined;
 	apiJob.started = job.started ? new Date(job.started) : undefined;
@@ -93,6 +97,89 @@ function dbJobToAPIJob(job: DBJob): APIJobResponse {
 		delete apiJob.output_prefix;
 	}
 	return apiJob as APIJobResponse;
+}
+
+function apiJobToDBJob(job: APIJobSubmission, userId: string): DBJob {
+	return {
+		id: crypto.randomUUID(),
+		user_id: userId,
+		status: 'pending',
+		num_failures: 0,
+		...job,
+		arguments: JSON.stringify(job.arguments),
+		environment: JSON.stringify(job.environment),
+		compression: job.compression ? 1 : 0,
+		sync: job.sync ? JSON.stringify(job.sync) : undefined,
+		input_bucket: job.input_bucket || '',
+		input_prefix: job.input_prefix || '',
+		checkpoint_bucket: job.checkpoint_bucket || '',
+		checkpoint_prefix: job.checkpoint_prefix || '',
+		output_bucket: job.output_bucket || '',
+		output_prefix: job.output_prefix || '',
+	};
+}
+
+function validateAndNormalizeStorageInfo(job: APIJobSubmission): APIJobSubmission {
+	// Only use sync OR legacy bucket/prefix
+	if (
+		job.sync &&
+		(job.input_bucket || job.checkpoint_bucket || job.output_bucket || job.input_prefix || job.checkpoint_prefix || job.output_prefix)
+	) {
+		throw new Error('Cannot use both sync and bucket/prefix');
+	}
+
+	// Must use sync OR legacy bucket/prefix
+	if (
+		!job.sync &&
+		(!job.input_bucket || !job.checkpoint_bucket || !job.output_bucket || !job.input_prefix || !job.checkpoint_prefix || !job.output_prefix)
+	) {
+		throw new Error('Must use either sync or bucket/prefix');
+	}
+
+	if (job.sync) {
+		if (job.sync.before && job.sync.before.length > 0) {
+			for (const sync of job.sync.before) {
+				if (!sync.prefix.endsWith('/')) {
+					sync.prefix += '/';
+				}
+				if (sync.direction !== 'download') {
+					throw new Error('sync.before.direction must be "download"');
+				}
+			}
+		}
+		if (job.sync.during && job.sync.during.length > 0) {
+			for (const sync of job.sync.during) {
+				if (!sync.prefix.endsWith('/')) {
+					sync.prefix += '/';
+				}
+				if (sync.direction !== 'upload') {
+					throw new Error('sync.during.direction must be "upload"');
+				}
+			}
+		}
+		if (job.sync.after && job.sync.after.length > 0) {
+			for (const sync of job.sync.after) {
+				if (!sync.prefix.endsWith('/')) {
+					sync.prefix += '/';
+				}
+				if (sync.direction !== 'upload') {
+					throw new Error('sync.after.direction must be "upload"');
+				}
+			}
+		}
+	} else {
+		if (job.input_prefix && !job.input_prefix.endsWith('/')) {
+			job.input_prefix += '/';
+		}
+		if (job.checkpoint_prefix && !job.checkpoint_prefix.endsWith('/')) {
+			job.checkpoint_prefix += '/';
+		}
+		if (job.output_prefix && !job.output_prefix.endsWith('/')) {
+			job.output_prefix += '/';
+		}
+	}
+
+	return job;
 }
 
 export class CreateJob extends OpenAPIRoute {
@@ -124,96 +211,19 @@ export class CreateJob extends OpenAPIRoute {
 	};
 
 	async handle(request: AuthedRequest, env: Env, ctx: any, data: { body: APIJobSubmission }) {
-		const { body } = data;
+		let { body } = data;
 		const { userId } = request;
 		if (!userId) {
 			return error(400, { error: 'User Required', message: 'No user ID found' });
 		}
-		// Only use sync OR legacy bucket/prefix
-		if (
-			body.sync &&
-			(body.input_bucket ||
-				body.checkpoint_bucket ||
-				body.output_bucket ||
-				body.input_prefix ||
-				body.checkpoint_prefix ||
-				body.output_prefix)
-		) {
-			return error(400, { error: 'Invalid request', message: 'Cannot use both sync and bucket/prefix' });
-		}
-
-		// Must use sync OR legacy bucket/prefix
-		if (
-			!body.sync &&
-			(!body.input_bucket ||
-				!body.checkpoint_bucket ||
-				!body.output_bucket ||
-				!body.input_prefix ||
-				!body.checkpoint_prefix ||
-				!body.output_prefix)
-		) {
-			return error(400, { error: 'Invalid request', message: 'Must use either sync or bucket/prefix' });
-		}
-
-		if (body.sync) {
-			if (body.sync.before && body.sync.before.length > 0) {
-				for (const sync of body.sync.before) {
-					if (!sync.prefix.endsWith('/')) {
-						sync.prefix += '/';
-					}
-					if (sync.direction !== 'download') {
-						return error(400, { error: 'Invalid request', message: 'sync.before.direction must be "download"' });
-					}
-				}
-			}
-			if (body.sync.during && body.sync.during.length > 0) {
-				for (const sync of body.sync.during) {
-					if (!sync.prefix.endsWith('/')) {
-						sync.prefix += '/';
-					}
-					if (sync.direction !== 'upload') {
-						return error(400, { error: 'Invalid request', message: 'sync.during.direction must be "upload"' });
-					}
-				}
-			}
-			if (body.sync.after && body.sync.after.length > 0) {
-				for (const sync of body.sync.after) {
-					if (!sync.prefix.endsWith('/')) {
-						sync.prefix += '/';
-					}
-					if (sync.direction !== 'upload') {
-						return error(400, { error: 'Invalid request', message: 'sync.after.direction must be "upload"' });
-					}
-				}
-			}
-		}
 		try {
-			const jobToInsert: DBJob = {
-				id: crypto.randomUUID(),
-				user_id: userId,
-				status: 'pending',
-				num_failures: 0,
-				...body,
-				arguments: JSON.stringify(body.arguments),
-				environment: JSON.stringify(body.environment),
-				compression: body.compression ? 1 : 0,
-				sync: body.sync ? JSON.stringify(body.sync) : undefined,
-				input_bucket: body.input_bucket || '',
-				input_prefix: body.input_prefix || '',
-				checkpoint_bucket: body.checkpoint_bucket || '',
-				checkpoint_prefix: body.checkpoint_prefix || '',
-				output_bucket: body.output_bucket || '',
-				output_prefix: body.output_prefix || '',
-			};
-			if (jobToInsert.input_prefix.length && !jobToInsert.input_prefix.endsWith('/')) {
-				jobToInsert.input_prefix += '/';
-			}
-			if (jobToInsert.checkpoint_prefix.length && !jobToInsert.checkpoint_prefix.endsWith('/')) {
-				jobToInsert.checkpoint_prefix += '/';
-			}
-			if (jobToInsert.output_prefix.length && !jobToInsert.output_prefix.endsWith('/')) {
-				jobToInsert.output_prefix += '/';
-			}
+			body = validateAndNormalizeStorageInfo(body);
+		} catch (e: any) {
+			return error(400, { error: 'Invalid request', message: e.message });
+		}
+
+		try {
+			const jobToInsert = apiJobToDBJob(body, userId);
 
 			const job = await createNewJob(jobToInsert, env);
 			if (!job || !job.created) {
@@ -223,6 +233,74 @@ export class CreateJob extends OpenAPIRoute {
 			const jobToReturn = dbJobToAPIJob(job);
 
 			return new Response(JSON.stringify(jobToReturn), {
+				status: 202,
+				headers: {
+					'Content-Type': 'application/json',
+				},
+			});
+		} catch (e: any) {
+			console.log(e);
+			return error(500, { error: 'Internal server error', message: e.message });
+		}
+	}
+}
+
+export class BatchCreateJobs extends OpenAPIRoute {
+	static schema = {
+		summary: 'Queue multiple jobs',
+		description: `Queue multiple jobs in one request. Limit 1000 jobs per request.\n\n${queueJobDocs}`,
+		security: [{ apiKey: [] }],
+		requestBody: APIJobSubmissionSchema.array().min(1).max(1000),
+		responses: {
+			'202': {
+				description: 'Jobs created',
+				schema: APIJobResponseSchema.array(),
+			},
+			'400': {
+				description: 'Invalid request',
+				schema: {
+					error: String,
+					message: String,
+				},
+			},
+			'500': {
+				description: 'Internal server error',
+				schema: {
+					error: String,
+					message: String,
+				},
+			},
+		},
+	};
+
+	async handle(request: AuthedRequest, env: Env, ctx: any, data: { body: APIJobSubmission[] }) {
+		const { body } = data;
+		const { userId } = request;
+		if (!userId) {
+			return error(400, { error: 'User Required', message: 'No user ID found' });
+		}
+
+		const jobsToInsert: DBJob[] = [];
+		for (let i = 0; i < body.length; i++) {
+			let job;
+			try {
+				job = validateAndNormalizeStorageInfo(body[i]);
+			} catch (e: any) {
+				return error(400, { error: 'Invalid request', message: e.message, index: i });
+			}
+
+			jobsToInsert.push(apiJobToDBJob(job, userId));
+		}
+
+		try {
+			const jobs = await batchCreateNewJobs(jobsToInsert, env);
+			if (!jobs || jobs.length === 0) {
+				return error(500, { error: 'Internal server error', message: 'Failed to create jobs' });
+			}
+
+			const jobsToReturn = jobs.map(dbJobToAPIJob);
+
+			return new Response(JSON.stringify(jobsToReturn), {
 				status: 202,
 				headers: {
 					'Content-Type': 'application/json',
