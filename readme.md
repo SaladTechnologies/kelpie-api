@@ -14,14 +14,17 @@ There are live swagger docs that should be considered more accurate and up to da
 ## Adding the kelpie Worker To Your Container Image
 
 ```dockerfile
+# Start with a base image that has the dependencies you need,
+# and can successfully run your script.
 FROM yourimage:yourtag
 
-# Install wget if it is not already present in your image
-RUN apt-get update && install -y wget
+# Add the kelpie binary to your container image
+ADD https://github.com/SaladTechnologies/kelpie/releases/download/0.5.0/kelpie /kelpie
+RUN chmod +x /kelpie
 
-# kelpie is a standalone x86-64 linux binary
-RUN wget https://github.com/SaladTechnologies/kelpie/releases/download/0.4.0/kelpie -O /kelpie && chmod +x /kelpie
-
+# Use kelpie as the "main" command. Kelpie will then execute your
+# command with the provided arguments and environment variables
+# from the job definition.
 CMD ["/kelpie"]
 ```
 
