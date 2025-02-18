@@ -498,13 +498,13 @@ export class JobHeartbeat extends OpenAPIRoute {
 			return error(400, { error: 'User Required', message: 'No user ID found' });
 		}
 		try {
-			const currentStatus = await updateJobHeartbeat(id, userId, env);
+			const currentStatus = await updateJobHeartbeat(id, userId, data.body.machine_id, env);
 			return { status: currentStatus };
 		} catch (e: any) {
 			if (e.message === 'Job not found') {
 				return error(404, { error: 'Not Found', message: 'Job not found' });
 			}
-			console.log(e);
+			console.error('Something went wrong with heartbeats:', e.message);
 			return error(500, { error: 'Internal server error', message: e.message });
 		}
 	}

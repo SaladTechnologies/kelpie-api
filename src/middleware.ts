@@ -1,5 +1,6 @@
-import { Env, AuthedRequest } from './types';
+import { Env, AuthedRequest, ApiKeyValidationResponse, SaladJWTPayload, AccessTokenData } from './types';
 import { error } from './utils/error';
+import * as jose from 'jose';
 
 export async function validateAuth(req: AuthedRequest, env: Env) {
 	const token = req.headers.get(env.API_HEADER);
