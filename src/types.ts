@@ -5,12 +5,6 @@ export interface Env {
 	MAX_FAILURES_PER_WORKER: string;
 	SALAD_API_KEY: string;
 	ADMIN_ID: string;
-	AUTH_URL: string;
-	JWKS_URL: string;
-	TOKEN_CACHE_TTL: string;
-	JWKS_CACHE_TTL: string;
-	SALAD_USERNAME: string;
-	SALAD_PASSWORD: string;
 
 	upload_tokens: KVNamespace;
 	download_tokens: KVNamespace;
