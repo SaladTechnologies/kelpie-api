@@ -129,30 +129,39 @@ export async function updateJobStatus(jobId: string, userId: string, machineId: 
 		.run();
 }
 
-export async function getJobStatus(id: string, userId: string, env: Env): Promise<string | null> {
-	const { results } = await env.DB.prepare('SELECT status FROM Jobs WHERE id = ? AND user_id = ?').bind(id, userId).all();
+export async function getJobStatus(id: string, userId: string, env: Env): Promise<{ status: string; machine_id?: string } | null> {
+	const { results } = await env.DB.prepare('SELECT status, machine_id FROM Jobs WHERE id = ? AND user_id = ?').bind(id, userId).all();
 	if (!results.length) {
 		return null;
 	}
-	return results[0].status as string;
+	return results[0] as { status: string; machine_id?: string };
 }
 
-export async function updateJobHeartbeat(id: string, userId: string, env: Env): Promise<string> {
-	const currentStatus = await getJobStatus(id, userId, env);
-	if (!currentStatus) {
+export async function updateJobHeartbeat(id: string, userId: string, machineId: string, env: Env): Promise<string> {
+	const jobStatus = await getJobStatus(id, userId, env);
+	if (!jobStatus) {
 		throw new Error('Job not found');
 	}
-	if (currentStatus !== 'running') {
-		return currentStatus;
+	const { status, machine_id } = jobStatus;
+	if (status !== 'running') {
+		return status;
+	}
+	if (machine_id && machine_id !== machineId) {
+		/**
+		 * This means a different machine has most recently grabbed the job.
+		 * If we tell the worker it was canceled, the worker will drop the job and
+		 * request a new one.
+		 */
+		return 'canceled';
 	}
 
 	await env.DB.prepare(
-		"UPDATE Jobs SET heartbeat = datetime('now'), num_heartbeats = num_heartbeats + 1 WHERE id = ? AND status = 'running' AND user_id = ?"
+		"UPDATE Jobs SET heartbeat = datetime('now'), num_heartbeats = num_heartbeats + 1, machine_id = ? WHERE id = ? AND status = 'running' AND user_id = ?"
 	)
-		.bind(id, userId)
+		.bind(machineId, id, userId)
 		.run();
 
-	return currentStatus;
+	return status;
 }
 
 export async function listJobsWithArbitraryFilter(
