@@ -129,12 +129,12 @@ export async function updateJobStatus(jobId: string, userId: string, machineId: 
 		.run();
 }
 
-export async function getJobStatus(id: string, userId: string, env: Env): Promise<{ status: string; machine_id: string } | null> {
+export async function getJobStatus(id: string, userId: string, env: Env): Promise<{ status: string; machine_id?: string } | null> {
 	const { results } = await env.DB.prepare('SELECT status, machine_id FROM Jobs WHERE id = ? AND user_id = ?').bind(id, userId).all();
 	if (!results.length) {
 		return null;
 	}
-	return results[0] as { status: string; machine_id: string };
+	return results[0] as { status: string; machine_id?: string };
 }
 
 export async function updateJobHeartbeat(id: string, userId: string, machineId: string, env: Env): Promise<string> {
