@@ -146,7 +146,7 @@ export async function updateJobHeartbeat(id: string, userId: string, machineId: 
 	if (status !== 'running') {
 		return status;
 	}
-	if (machine_id !== machineId) {
+	if (machine_id && machine_id !== machineId) {
 		/**
 		 * This means a different machine has most recently grabbed the job.
 		 * If we tell the worker it was canceled, the worker will drop the job and
@@ -156,9 +156,9 @@ export async function updateJobHeartbeat(id: string, userId: string, machineId: 
 	}
 
 	await env.DB.prepare(
-		"UPDATE Jobs SET heartbeat = datetime('now'), num_heartbeats = num_heartbeats + 1 WHERE id = ? AND status = 'running' AND user_id = ? "
+		"UPDATE Jobs SET heartbeat = datetime('now'), num_heartbeats = num_heartbeats + 1, machine_id = ? WHERE id = ? AND status = 'running' AND user_id = ? "
 	)
-		.bind(id, userId)
+		.bind(machineId, id, userId)
 		.run();
 
 	return status;
