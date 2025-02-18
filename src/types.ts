@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { JWTPayload } from 'jose';
 
 export interface Env {
 	API_HEADER: string;
@@ -230,26 +229,3 @@ export type Instance = {
 export type InstanceList = {
 	instances: Instance[];
 };
-
-export interface SaladJWTPayload extends JWTPayload {
-	salad_machine_id: string;
-	salad_organization_id: string;
-	salad_organization_name: string;
-	salad_workload_id: string;
-	salad_workload_name: string;
-}
-
-export interface AccessTokenData {
-	orgId: string;
-	orgName: string;
-	filename: string;
-	method: string;
-}
-
-export interface ApiKeyValidationResponse {
-	is_api_key_valid: boolean;
-	is_organization_name_valid: boolean;
-	is_entitled: boolean;
-	organization_id: string;
-	organization_name: string;
-}
