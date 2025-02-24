@@ -110,8 +110,8 @@ export type APIJobResponse = z.infer<typeof APIJobResponseSchema>;
 
 export const APIScalingRuleSchema = z.object({
 	container_group_id: z.string().uuid(),
-	min_replicas: z.number().int().min(0).max(250),
-	max_replicas: z.number().int().min(0).max(250),
+	min_replicas: z.number().int().min(0).max(500),
+	max_replicas: z.number().int().min(0).max(500),
 	idle_threshold_seconds: z.number().int().min(0).max(3600),
 });
 
