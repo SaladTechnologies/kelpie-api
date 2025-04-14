@@ -626,8 +626,6 @@ async function fireWebhook(
 		} catch (e: any) {
 			console.log('Failed to send webhook', e);
 		}
-	} else {
-		console.log('No webhook found for job', jobId);
 	}
 }
 
