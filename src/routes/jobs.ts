@@ -428,7 +428,9 @@ export class GetWork extends OpenAPIRoute {
 				}
 				await updateJobStatus(job.id, userId, machine_id, 'running', env);
 				const updatedJob = await getJobByUserAndId(userId, job.id, env);
-				fireWebhook(env, request.headers.get(env.API_HEADER) || '', job.id, userId, machine_id, container_group_id, 'running');
+				ctx.waitUntil(
+					fireWebhook(env, request.headers.get(env.API_HEADER) || '', job.id, userId, machine_id, container_group_id, 'running')
+				);
 				return [dbJobToAPIJob(updatedJob!)];
 			}
 
@@ -566,14 +568,16 @@ export class ReportJobFailure extends OpenAPIRoute {
 			await env.banned_workers.put(`${data.body.machine_id}:${id}`, 'true');
 			if (num_failures + 1 >= max_failures) {
 				await Promise.all([updateJobStatus(id, userId, data.body.machine_id, 'failed', env), incrementFailedAttempts(id, userId, env)]);
-				fireWebhook(
-					env,
-					request.headers.get(env.API_HEADER) || '',
-					id,
-					userId,
-					data.body.machine_id,
-					data.body.container_group_id,
-					'failed'
+				ctx.waitUntil(
+					fireWebhook(
+						env,
+						request.headers.get(env.API_HEADER) || '',
+						id,
+						userId,
+						data.body.machine_id,
+						data.body.container_group_id,
+						'failed'
+					)
 				);
 			} else {
 				await incrementFailedAttempts(id, userId, env);
@@ -603,7 +607,6 @@ async function fireWebhook(
 	const job = await getJobByUserAndId(userId, jobId, env);
 	if (job && job.webhook) {
 		try {
-			console.log('Firing webhook', job.webhook);
 			const resp = await fetch(job.webhook, {
 				method: 'POST',
 				headers: {
@@ -677,7 +680,7 @@ export class ReportJobCompleted extends OpenAPIRoute {
 		}
 		try {
 			await updateJobStatus(id, userId, machine_id, 'completed', env);
-			fireWebhook(env, request.headers.get(env.API_HEADER) || '', id, userId, machine_id, container_group_id, 'completed');
+			ctx.waitUntil(fireWebhook(env, request.headers.get(env.API_HEADER) || '', id, userId, machine_id, container_group_id, 'completed'));
 			return { message: 'Completed reported' };
 		} catch (e: any) {
 			console.log(e);
