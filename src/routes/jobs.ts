@@ -603,6 +603,7 @@ async function fireWebhook(
 	const job = await getJobByUserAndId(userId, jobId, env);
 	if (job && job.webhook) {
 		try {
+			console.log('Firing webhook', job.webhook);
 			const resp = await fetch(job.webhook, {
 				method: 'POST',
 				headers: {
