@@ -1,6 +1,6 @@
 {
   "name": "kelpie-api",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "private": true,
   "scripts": {
     "deploy": "wrangler deploy",
@@ -12,7 +12,7 @@
     "@cloudflare/workers-types": "^4.20240208.0",
     "@types/node": "^20.11.19",
     "typescript": "^5.0.4",
-    "wrangler": "^3.29.0"
+    "wrangler": "^4"
   },
   "dependencies": {
     "@cloudflare/itty-router-openapi": "^1.0.10",
