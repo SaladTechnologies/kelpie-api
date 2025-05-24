@@ -51,7 +51,11 @@ export async function reallocateInstance(
 		},
 	});
 	if (!response.ok) {
-		console.log(`Failed to reallocate instance: ${response.status}`);
+		if (response.status === 400) {
+			const errorResponse = await response.text();
+			throw new Error(`Failed to reallocate instance: ${errorResponse}`);
+		}
+		console.log(`Failed to reallocate instance: ${response.status}: ${response.statusText}`);
 		console.log(await response.text());
 	}
 }
@@ -65,6 +69,10 @@ export async function stopContainerGroup(env: Env, orgName: string, projectName:
 		},
 	});
 	if (!stopResponse.ok) {
+		if (stopResponse.status === 400) {
+			const errorResponse = await stopResponse.text();
+			throw new Error(`Failed to stop container group: ${errorResponse}`);
+		}
 		throw new Error(`Failed to stop container group: ${stopResponse.status}: ${stopResponse.statusText}`);
 	}
 	return;
@@ -79,6 +87,10 @@ export async function startContainerGroup(env: Env, orgName: string, projectName
 		},
 	});
 	if (!startResponse.ok) {
+		if (startResponse.status === 400) {
+			const errorResponse = await startResponse.text();
+			throw new Error(`Failed to start container group: ${errorResponse}`);
+		}
 		throw new Error(`Failed to start container group: ${startResponse.status}: ${startResponse.statusText}`);
 	}
 	return;
@@ -97,6 +109,10 @@ export async function listContainerGroupInstances(
 		},
 	});
 	if (!response.ok) {
+		if (response.status === 400) {
+			const errorResponse = await response.text();
+			throw new Error(`Failed to list container group instances: ${errorResponse}`);
+		}
 		throw new Error(`Failed to list container group instances: ${response.status}: ${response.statusText}`);
 	}
 	const data = (await response.json()) as InstanceList;
@@ -121,6 +137,10 @@ export async function setContainerGroupReplicas(
 		body: JSON.stringify({ replicas: numReplicas }),
 	});
 	if (!response.ok) {
+		if (response.status === 400) {
+			const errorResponse = await response.text();
+			throw new Error(`Failed to set container group replicas: ${errorResponse}`);
+		}
 		throw new Error(`Failed to set container group replicas: ${response.status}: ${response.statusText}`);
 	}
 	return;
@@ -139,6 +159,10 @@ export async function getContainerGroupByName(
 		},
 	});
 	if (!response.ok) {
+		if (response.status === 400) {
+			const errorResponse = await response.text();
+			throw new Error(`Failed to get container group: ${errorResponse}`);
+		}
 		if (response.status === 404) {
 			return null;
 		}
