@@ -21,7 +21,7 @@ export async function getContainerGroupByID(
 	const url = `${saladBaseUrl}/organizations/${orgName}/projects/${projectName}/containers`;
 	const response = await fetch(url, { headers: { 'Salad-Api-Key': env.SALAD_API_KEY } });
 	if (!response.ok) {
-		console.log(`Failed to fetch container group: ${response.status}`);
+		console.log(`Failed to fetch container groups in project ${orgName}/${projectName}: ${response.status}`);
 		console.log(await response.text());
 		return null;
 	}
@@ -51,8 +51,13 @@ export async function reallocateInstance(
 		},
 	});
 	if (!response.ok) {
-		console.log(`Failed to reallocate instance: ${response.status}`);
-		console.log(await response.text());
+		if (response.status === 400) {
+			const errorResponse = await response.text();
+			throw new Error(`Failed to reallocate instance ${orgName}/${projectName}/${containerGroupName}/${machineId}: ${errorResponse}`);
+		}
+		console.log(
+			`Failed to reallocate instance ${orgName}/${projectName}/${containerGroupName}/${machineId}: ${response.status}: ${response.statusText}`
+		);
 	}
 }
 
@@ -65,7 +70,13 @@ export async function stopContainerGroup(env: Env, orgName: string, projectName:
 		},
 	});
 	if (!stopResponse.ok) {
-		throw new Error(`Failed to stop container group: ${stopResponse.status}: ${stopResponse.statusText}`);
+		if (stopResponse.status === 400) {
+			const errorResponse = await stopResponse.text();
+			throw new Error(`Failed to stop container group ${orgName}/${projectName}/${containerGroupName}: ${errorResponse}`);
+		}
+		throw new Error(
+			`Failed to stop container group ${orgName}/${projectName}/${containerGroupName}: ${stopResponse.status}: ${stopResponse.statusText}`
+		);
 	}
 	return;
 }
@@ -79,7 +90,13 @@ export async function startContainerGroup(env: Env, orgName: string, projectName
 		},
 	});
 	if (!startResponse.ok) {
-		throw new Error(`Failed to start container group: ${startResponse.status}: ${startResponse.statusText}`);
+		if (startResponse.status === 400) {
+			const errorResponse = await startResponse.text();
+			throw new Error(`Failed to start container group ${orgName}/${projectName}/${containerGroupName}: ${errorResponse}`);
+		}
+		throw new Error(
+			`Failed to start container group ${orgName}/${projectName}/${containerGroupName}: ${startResponse.status}: ${startResponse.statusText}`
+		);
 	}
 	return;
 }
@@ -97,7 +114,13 @@ export async function listContainerGroupInstances(
 		},
 	});
 	if (!response.ok) {
-		throw new Error(`Failed to list container group instances: ${response.status}: ${response.statusText}`);
+		if (response.status === 400) {
+			const errorResponse = await response.text();
+			throw new Error(`Failed to list container group instances ${orgName}/${projectName}/${containerGroupName}: ${errorResponse}`);
+		}
+		throw new Error(
+			`Failed to list container group instances ${orgName}/${projectName}/${containerGroupName}: ${response.status}: ${response.statusText}`
+		);
 	}
 	const data = (await response.json()) as InstanceList;
 	return data;
@@ -121,7 +144,13 @@ export async function setContainerGroupReplicas(
 		body: JSON.stringify({ replicas: numReplicas }),
 	});
 	if (!response.ok) {
-		throw new Error(`Failed to set container group replicas: ${response.status}: ${response.statusText}`);
+		if (response.status === 400) {
+			const errorResponse = await response.text();
+			throw new Error(`Failed to set container group replicas ${orgName}/${projectName}/${containerGroupName}: ${errorResponse}`);
+		}
+		throw new Error(
+			`Failed to set container group replicas ${orgName}/${projectName}/${containerGroupName}: ${response.status}: ${response.statusText}`
+		);
 	}
 	return;
 }
@@ -139,10 +168,16 @@ export async function getContainerGroupByName(
 		},
 	});
 	if (!response.ok) {
+		if (response.status === 400) {
+			const errorResponse = await response.text();
+			throw new Error(`Failed to get container group ${orgName}/${projectName}/${containerGroupName}: ${errorResponse}`);
+		}
 		if (response.status === 404) {
 			return null;
 		}
-		throw new Error(`Failed to get container group: ${response.status}: ${response.statusText}`);
+		throw new Error(
+			`Failed to get container group ${orgName}/${projectName}/${containerGroupName}: ${response.status}: ${response.statusText}`
+		);
 	}
 	const data = (await response.json()) as SaladContainerGroup;
 	return data;

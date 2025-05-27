@@ -1,6 +1,6 @@
 {
   "name": "kelpie-api",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "private": true,
   "scripts": {
     "deploy": "wrangler deploy",
@@ -8,7 +8,7 @@
     "test": "vitest run --no-file-parallelism"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "^0.2.2",
+    "@cloudflare/vitest-pool-workers": "^0.8.32",
     "@cloudflare/workers-types": "^4.20240208.0",
     "@types/node": "^20.11.19",
     "typescript": "^5.0.4",
