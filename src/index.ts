@@ -47,6 +47,16 @@ router.registry.registerComponent('securitySchemes', 'apiKey', {
 	in: 'header',
 	name: 'X-Kelpie-Key',
 });
+router.registry.registerComponent('securitySchemes', 'saladApiKey', {
+	type: 'apiKey',
+	in: 'header',
+	name: 'Salad-Api-Key',
+});
+router.registry.registerComponent('securitySchemes', 'jwt', {
+	type: 'http',
+	scheme: 'bearer',
+	bearerFormat: 'JWT',
+});
 
 router.post('/jobs', CreateJob);
 router.post('/jobs/batch', BatchCreateJobs);

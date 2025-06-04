@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@cloudflare/itty-router-openapi": "^1.0.10",
+    "jose": "^6.0.11",
     "zod": "^3.22.4"
   }
 }

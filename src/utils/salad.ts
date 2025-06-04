@@ -2,6 +2,30 @@ import { Env, SaladContainerGroup, ListContainerGroupsResponse, InstanceList } f
 
 const saladBaseUrl = 'https://api.salad.com/api/public';
 
+export async function listContainerGroups(env: Env, orgName: string, projectName: string, noCache = false): Promise<SaladContainerGroup[]> {
+	// Check to see if we cached the value already
+	if (!noCache) {
+		const cachedValue = await env.salad_cache.get(`${orgName}/${projectName}`);
+		if (cachedValue) {
+			return JSON.parse(cachedValue) as SaladContainerGroup[];
+		}
+	}
+
+	// Fetch the container groups from Salad
+	const url = `${saladBaseUrl}/organizations/${orgName}/projects/${projectName}/containers`;
+	const response = await fetch(url, { headers: { 'Salad-Api-Key': env.SALAD_API_KEY } });
+	if (!response.ok) {
+		console.log(`Failed to fetch container groups in project ${orgName}/${projectName}: ${response.status}`);
+		console.log(await response.text());
+		throw new Error(`Failed to fetch container groups in project ${orgName}/${projectName}: ${response.status}: ${response.statusText}`);
+	}
+	const data = (await response.json()) as ListContainerGroupsResponse;
+
+	// Cache the value
+	await env.salad_cache.put(`${orgName}/${projectName}`, JSON.stringify(data.items));
+	return data.items;
+}
+
 export async function getContainerGroupByID(
 	env: Env,
 	id: string,
@@ -17,16 +41,12 @@ export async function getContainerGroupByID(
 		}
 	}
 
-	// Fetch the container group from Salad
-	const url = `${saladBaseUrl}/organizations/${orgName}/projects/${projectName}/containers`;
-	const response = await fetch(url, { headers: { 'Salad-Api-Key': env.SALAD_API_KEY } });
-	if (!response.ok) {
-		console.log(`Failed to fetch container groups in project ${orgName}/${projectName}: ${response.status}`);
-		console.log(await response.text());
-		return null;
+	let allContainerGroups = await listContainerGroups(env, orgName, projectName, false);
+	let containerGroup = allContainerGroups.find((group) => group.id === id) || null;
+	if (!containerGroup) {
+		allContainerGroups = await listContainerGroups(env, orgName, projectName, true);
+		containerGroup = allContainerGroups.find((group) => group.id === id) || null;
 	}
-	const data = (await response.json()) as ListContainerGroupsResponse;
-	const containerGroup = data.items.find((group) => group.id === id) || null;
 
 	// Cache the value
 	if (containerGroup) {
