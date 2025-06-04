@@ -31,7 +31,7 @@ const router = OpenAPIRouter({
 		info: {
 			title: '🐕 Kelpie API',
 			description: 'API for running long jobs on Salad',
-			version: '0.6.0',
+			version: '0.6.4',
 		},
 	},
 });
@@ -86,6 +86,7 @@ class CatchAll extends OpenAPIRoute {
 	static schema = {
 		summary: 'Catch All',
 		description: 'Catch all for unmatched routes',
+		security: [{ apiKey: [], jwt: [], saladApiKey: [] }],
 		responses: {
 			'404': {
 				description: 'Not Found',

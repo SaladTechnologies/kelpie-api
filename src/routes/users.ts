@@ -7,7 +7,7 @@ export class CreateUser extends OpenAPIRoute {
 	static schema = {
 		summary: '(ADMIN) Create a new user',
 		description: 'Create a new user',
-		security: [{ apiKey: [] }],
+		security: [{ apiKey: [], jwt: [], saladApiKey: [] }],
 		requestBody: {
 			username: String,
 		},
@@ -65,7 +65,7 @@ export class CreateToken extends OpenAPIRoute {
 	static schema = {
 		summary: '(ADMIN) Create a new token',
 		description: 'Create a new token',
-		security: [{ apiKey: [] }],
+		security: [{ apiKey: [], jwt: [], saladApiKey: [] }],
 		parameters: {
 			id: Path(String, { description: 'User ID', required: true }),
 		},
@@ -180,7 +180,7 @@ export class GetUser extends OpenAPIRoute {
 	static schema = {
 		summary: 'Get the logged in user',
 		description: 'Get the logged in user',
-		security: [{ apiKey: [] }],
+		security: [{ apiKey: [], jwt: [], saladApiKey: [] }],
 		responses: {
 			'200': {
 				description: 'User found',
