@@ -1,11 +1,12 @@
-![](./kelpie.png)
 # 🐕 Kelpie API
+
+![A helpful kelpie](./kelpie.png)
 
 `kelpie` is a workload-agnostic framework for shepherding long-running jobs to completion across a Salad Container Group, which consists of interruptible nodes.
 
 ## Swagger Docs
 
-There are live swagger docs that should be considered more accurate and up to date than this readme: https://kelpie.saladexamples.com/docs
+There are [live swagger docs](https://kelpie.saladexamples.com/docs) that should be considered more accurate and up to date than this readme.
 
 ## How it works
 
@@ -19,7 +20,8 @@ There are live swagger docs that should be considered more accurate and up to da
 FROM yourimage:yourtag
 
 # Add the kelpie binary to your container image
-ADD https://github.com/SaladTechnologies/kelpie/releases/download/0.5.0/kelpie /kelpie
+ARG KELPIE_VERSION=0.5.1
+ADD https://github.com/SaladTechnologies/kelpie/releases/download/${KELPIE_VERSION}/kelpie /kelpie
 RUN chmod +x /kelpie
 
 # Use kelpie as the "main" command. Kelpie will then execute your
@@ -30,18 +32,13 @@ CMD ["/kelpie"]
 
 When running the image, you will need additional configuration in the environment:
 
-- AWS/Cloudflare Credentials: Provide `AWS_ACCESS_KEY_ID`, etc to enable the kelpie worker to upload and download from your bucket storage. We use the s3 compatability api, so any s3-compatible storage should work.
+- AWS/Cloudflare Credentials: Provide `AWS_ACCESS_KEY_ID`, etc to enable the kelpie worker to upload and download from your bucket storage. We use the s3 compatibility api, so any s3-compatible storage should work.
 - `KELPIE_API_URL`: the root URL for the coordination API, e.g. kelpie.saladexamples.com
-- `KELPIE_API_KEY`: Your api key for the coordination API, issued by Salad for use with kelpie. NOT your Salad API Key.
-
+- `SALAD_PROJECT`: the name of the Salad project you are using. This is used to scope your jobs and resources to a specific project.
 
 Additionally, your script must support the following things:
 
-- Environment variables - If these are set by you in your container group configuration, they will be respected, otherwise they will be set by kelpie.
-  - `INPUT_DIR`: Where to look for whatever data is needed as input. This will be downloaded from your bucket storage by kelpie prior to running the script.
-  - `CHECKPOINT_DIR`: This is where to save progress checkpoints locally. kelpie will handle syncing the contents to your bucket storage, and will make sure any existing checkpoint is downloaded prior to running the script.
-  - `OUTPUT_DIR`: This is where to save any output artifacts. kelpie will upload your artifacts to your bucket storage.
-- Saving and Resuming From Checkpoints: Your script should periodically output progress checkpoints to `CHECKPOINT_DIR`, so that the job can be resumed if it gets interrupted. Similarly, when your script starts, it should check `CHECKPOINT_DIR` to see if there is anything to resume, and only start from the beginning if no checkpoint is present.
+- Saving and Resuming From Checkpoints: Your script should periodically output progress checkpoints to a directory configured in your job definition so that the job can be resumed if it gets interrupted. Similarly, when your script starts, it should check the configured directory to see if there is anything to resume, and only start from the beginning if no checkpoint is present.
 - It must exit "successfully" with an exit code of 0 upon completion.
 
 ## What it DOES NOT do
@@ -52,6 +49,25 @@ Additionally, your script must support the following things:
 4. kelpie does not create or delete your container groups. If configured with scaling rules, kelpie can start, stop, and scale your container group in response to job volume.
 
 ## API Authorization
+
+### Salad API Key
+
+You will use your Salad API Key in the `Salad-Api-Key` header for all requests to the Kelpie API. This is used to authenticate you as a Salad user, and to authorize you to use the Kelpie API.
+
+When using this key, you must also include two additional headers:
+
+- `Salad-Organization`: The name of the Salad organization you are using
+- `Salad-Project`: The name of the Salad project you are using
+
+Many Kelpie operations are specific to a Salad organization and project, so these headers are required for all requests.
+
+### Salad Instance Metadata Service (IMDS) JWT
+
+Kelpie workers will use a JWT issued by the Salad Instance Metadata Service (IMDS) to authenticate themselves to the Kelpie API. This JWT is automatically provided by the Salad Container Group when the worker is running inside a Salad Container Group. This JWT is included in the `Authorization` header of all requests made by the Kelpie worker to the Kelpie API as a Bearer token.
+
+Kelpie will also include the required `Salad-Project` header, using a value found in the environment variable `SALAD_PROJECT` set by you when configuring your container group.
+
+### LEGACY: Kelpie API Key
 
 Your kelpie api key is used by you to submit work, and also by kelpie workers to pull and process work.
 
@@ -80,12 +96,39 @@ Queueing a job for processing is a simple post request to the Kelpie API
     "value"
   ],
   "environment": { "SOME_VAR": "string"},
-  "input_bucket": "my-bucket",
-  "input_prefix": "inputs/job1/",
-  "checkpoint_bucket": "my-bucket",
-  "checkpoint_prefix": "checkpoints/job1/",
-  "output_bucket": "my-bucket",
-  "output_prefix": "outputs/job1/",
+  "sync": {
+    "before": [
+      {
+        "bucket": "my-bucket",
+        "prefix": "inputs/job1/",
+        "local_path": "inputs/",
+        "direction": "download"
+      },
+      {
+        "bucket": "my-bucket",
+        "prefix": "checkpoints/job1/",
+        "local_path": "checkpoints/",
+        "direction": "download"
+      }
+    ],
+    "during": [
+      {
+        "bucket": "my-bucket",
+        "prefix": "checkpoints/job1/",
+        "local_path": "checkpoints/",
+        "direction": "upload"
+      }
+    ],
+    "after": [
+      {
+        "bucket": "my-bucket",
+        "prefix": "outputs/job1/",
+        "local_path": "outputs/",
+        "direction": "upload"
+      },
+
+    ]
+ },
   "webhook": "https://myapi.com/kelpie-webhooks",
   "container_group_id": "97f504e8-6de6-4322-b5d5-1777a59a7ad3"
 }
@@ -110,12 +153,38 @@ Queueing a job for processing is a simple post request to the Kelpie API
     "value"
   ],
   "environment": { "SOME_VAR": "string"},
-  "input_bucket": "my-bucket",
-  "input_prefix": "inputs/job1/",
-  "checkpoint_bucket": "my-bucket",
-  "checkpoint_prefix": "checkpoints/job1/",
-  "output_bucket": "my-bucket",
-  "output_prefix": "outputs/job1/",
+  "sync": {
+    "before": [
+      {
+        "bucket": "my-bucket",
+        "prefix": "inputs/job1/",
+        "local_path": "inputs/",
+        "direction": "download"
+      },
+      {
+        "bucket": "my-bucket",
+        "prefix": "checkpoints/job1/",
+        "local_path": "checkpoints/",
+        "direction": "download"
+      }
+    ],
+    "during": [
+      {
+        "bucket": "my-bucket",
+        "prefix": "checkpoints/job1/",
+        "local_path": "checkpoints/",
+        "direction": "upload"
+      }
+    ],
+    "after": [
+      {
+        "bucket": "my-bucket",
+        "prefix": "outputs/job1/",
+        "local_path": "outputs/",
+        "direction": "upload"
+      }
+    ]
+  },
   "webhook": "https://myapi.com/kelpie-webhooks",
   "heartbeat": null,
   "num_failures": 0,
@@ -162,12 +231,39 @@ As mentioned above, Kelpie does not monitor the progress of your job, but it doe
     "--arg",
     "value"
   ],
-  "input_bucket": "my-bucket",
-  "input_prefix": "inputs/job1/",
-  "checkpoint_bucket": "my-bucket",
-  "checkpoint_prefix": "checkpoints/job1/",
-  "output_bucket": "my-bucket",
-  "output_prefix": "outputs/job1/",
+  "environment": { "SOME_VAR": "string"},
+  "sync": {
+    "before": [
+      {
+        "bucket": "my-bucket",
+        "prefix": "inputs/job1/",
+        "local_path": "inputs/",
+        "direction": "download"
+      },
+      {
+        "bucket": "my-bucket",
+        "prefix": "checkpoints/job1/",
+        "local_path": "checkpoints/",
+        "direction": "download"
+      }
+    ],
+    "during": [
+      {
+        "bucket": "my-bucket",
+        "prefix": "checkpoints/job1/",
+        "local_path": "checkpoints/",
+        "direction": "upload"
+      }
+    ],
+    "after": [
+      {
+        "bucket": "my-bucket",
+        "prefix": "outputs/job1/",
+        "local_path": "outputs/",
+        "direction": "upload"
+      }
+    ]
+  },
   "webhook": "https://myapi.com/kelpie-webhooks",
   "heartbeat": null,
   "num_failures": 0,
@@ -215,12 +311,39 @@ All query parameters for this endpoint are optional.
         "--arg",
         "value"
       ],
-      "input_bucket": "my-bucket",
-      "input_prefix": "inputs/job1/",
-      "checkpoint_bucket": "my-bucket",
-      "checkpoint_prefix": "checkpoints/job1/",
-      "output_bucket": "my-bucket",
-      "output_prefix": "outputs/job1/",
+      "environment": { "SOME_VAR": "string"},
+      "sync": {
+        "before": [
+          {
+            "bucket": "my-bucket",
+            "prefix": "inputs/job1/",
+            "local_path": "inputs/",
+            "direction": "download"
+          },
+          {
+            "bucket": "my-bucket",
+            "prefix": "checkpoints/job1/",
+            "local_path": "checkpoints/",
+            "direction": "download"
+          }
+        ],
+        "during": [
+          {
+            "bucket": "my-bucket",
+            "prefix": "checkpoints/job1/",
+            "local_path": "checkpoints/",
+            "direction": "upload"
+          }
+        ],
+        "after": [
+          {
+            "bucket": "my-bucket",
+            "prefix": "outputs/job1/",
+            "local_path": "outputs/",
+            "direction": "upload"
+          }
+        ]
+      },
       "webhook": "https://myapi.com/kelpie-webhooks",
       "heartbeat": null,
       "num_failures": 0,
@@ -231,18 +354,17 @@ All query parameters for this endpoint are optional.
 }
 ```
 
-
 ## Job Lifecycle
 
 1. When kelpie starts on a new node, it starts polling for available work from `/work`. In these requests, it includes some information about what salad node you're on, including the machine id and container group id. This ensures we only hand out work to the correct container group, and that we do not hand out to a machine where that job has previously failed.
 2. When a job is started, a webhook is sent, if configured.
-3. Once it receives a job, kelpie downloads your inputs, and your checkpoint
+3. Once it receives a job, kelpie downloads anything in `.sync.before`.
 4. Once required files are downloaded, kelpie executes your command with the provided arguments, adding environment variables as documented above.
-5. Whenever files are added to the checkpoint directory, kelpie syncs the directory to the checkpoint bucket and prefix.
-6. Whenever files are added to the output directory, kelpie syncs the directory to the output bucket and prefix.
-7. When your command exits 0, the job is marked as complete, and a webhook is sent (if configured) to notify you about the job's completion.
-   1. If your job fails, meaning exits non-0, it will be reported as a failure to the api. When this occurs, the number of failures for the job is incremented, up to 3. The machine id reporting the failure will be blocked from receiving that job again. If the job fails 3 times, it is marked failed, and a webhook is sent, if configured. If a machine id is blocked from 5 jobs, the container will be reallocated to a different machine, provided you have added the kelpie user to your salad org.
-8. input, checkpoint, and output directories are purged, and the cycle begins again
+5. Whenever files are added to a directory configured in `.sync.during`, kelpie syncs the directory to the checkpoint bucket and prefix.
+6. When your command exits 0, the job is marked as complete, and a webhook is sent (if configured) to notify you about the job's completion.
+   1. If your job has a `.sync.after` configured, kelpie will upload the contents of that directory to the configured bucket and prefix before marking the job as complete.
+   2. If your job fails, meaning exits non-0, it will be reported as a failure to the api. When this occurs, the number of failures for the job is incremented, up to 3. The machine id reporting the failure will be blocked from receiving that job again. If the job fails 3 times, it is marked failed, and a webhook is sent, if configured. If a machine id is blocked from 5 jobs, the container will be reallocated to a different machine, provided you have added the kelpie user to your salad org.
+7. All configured directories in `.sync` are wiped out to reset for the next job.
 
 ## Status Webhooks
 
