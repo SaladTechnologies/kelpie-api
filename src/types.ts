@@ -23,6 +23,7 @@ export interface Env {
 	TEST_API_KEY?: string;
 	TEST_ORG?: string;
 	TEST_ORG_ID?: string;
+	TEST_JWT?: string;
 }
 
 export const SaladDataSchema = z.object({

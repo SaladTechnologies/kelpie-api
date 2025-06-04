@@ -222,6 +222,8 @@ export async function validateSaladJWT(env: Env, token: string): Promise<SaladJW
 	const jwksRaw = await getJWKs(env);
 	const jwks = jose.createLocalJWKSet(jwksRaw);
 
+	const decoded = jose.decodeJwt(token);
+
 	const { payload } = await jose.jwtVerify(token, jwks);
 
 	return payload as SaladJWTPayload;

@@ -57,7 +57,7 @@ describe('POST /users/:id/token', () => {
 });
 
 describe('GET /users/me', () => {
-	it('Returns the current user from a kelpie api key', async () => {
+	it('Returns the current user from a Kelpie API Key', async () => {
 		const { user, token } = await createUser('testuser-get-me-kelpie');
 		const response = await fetch('http://localhost:8787/users/me', {
 			method: 'GET',
@@ -90,6 +90,23 @@ describe('GET /users/me', () => {
 
 		expect(response.status).toEqual(200);
 
+		const userResponse = JSON.parse(body) as any;
+		expect(userResponse.username).toEqual(env.TEST_ORG!);
+	});
+
+	it('Returns the current user from an IMDS JWT', async () => {
+		expect(env.TEST_JWT).toBeDefined();
+		expect(env.TEST_ORG).toBeDefined();
+		const response = await fetch('http://localhost:8787/users/me', {
+			method: 'GET',
+			headers: {
+				Authorization: `Bearer ${env.TEST_JWT!}`,
+				'Salad-Project': 'default',
+			},
+		});
+		const body = await response.text();
+
+		expect(response.status).toEqual(200);
 		const userResponse = JSON.parse(body) as any;
 		expect(userResponse.username).toEqual(env.TEST_ORG!);
 	});
