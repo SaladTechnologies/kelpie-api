@@ -81,7 +81,7 @@ describe('PATCH /scaling-rules/:id', () => {
 		expect(updateResponse.status).toEqual(200);
 
 		const updatedRuleResponse = (await updateResponse.json()) as any;
-		expect(updatedRuleResponse).toMatchObject({ ...createdRule, ...updatedRule });
+		expect(updatedRuleResponse).toMatchObject({ ...createdRule, ...updatedRule, updated: updatedRuleResponse.updated });
 	});
 });
 

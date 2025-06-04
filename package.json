@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "deploy": "wrangler deploy",
-    "start": "wrangler dev",
+    "start": "wrangler -c wrangler.dev.toml dev",
     "test": "vitest run --no-file-parallelism"
   },
   "devDependencies": {
