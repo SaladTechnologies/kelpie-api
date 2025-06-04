@@ -13,11 +13,6 @@ beforeAll(async () => {
 	token = t;
 });
 
-afterAll(async () => {
-	await clearJobs();
-	await clearUsers();
-});
-
 async function queueJob(overrides: any = {}) {
 	return fetch('http://localhost:8787/jobs', {
 		method: 'POST',

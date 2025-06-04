@@ -1,8 +1,8 @@
 import { expect, it, describe, beforeAll, afterAll } from 'vitest';
 import { adminToken, clearUsers, createUser } from '../utils/test';
+import { env } from 'cloudflare:test';
 
 beforeAll(clearUsers);
-afterAll(clearUsers);
 
 describe('POST /users', () => {
 	it('Creates a new user', async () => {
@@ -57,19 +57,8 @@ describe('POST /users/:id/token', () => {
 });
 
 describe('GET /users/me', () => {
-	let user: any;
-	let token: string;
-	beforeAll(async () => {
-		await clearUsers();
-		const { user: u, token: t } = await createUser('testuser-jobs');
-		user = u;
-		token = t;
-	});
-
-	afterAll(async () => {
-		await clearUsers();
-	});
-	it('Returns the current user', async () => {
+	it('Returns the current user from a kelpie api key', async () => {
+		const { user, token } = await createUser('testuser-get-me-kelpie');
 		const response = await fetch('http://localhost:8787/users/me', {
 			method: 'GET',
 			headers: {
@@ -83,5 +72,25 @@ describe('GET /users/me', () => {
 
 		const userResponse = JSON.parse(body) as any;
 		expect(userResponse).toMatchObject(user);
+	});
+
+	it('Returns the current user from a Salad API Key', async () => {
+		expect(env.TEST_API_KEY).toBeDefined();
+		expect(env.TEST_ORG).toBeDefined();
+		const response = await fetch('http://localhost:8787/users/me', {
+			method: 'GET',
+			headers: {
+				'Salad-Api-Key': env.TEST_API_KEY!,
+				'Salad-Organization': env.TEST_ORG!,
+				'Salad-Project': 'default',
+			},
+		});
+
+		const body = await response.text();
+
+		expect(response.status).toEqual(200);
+
+		const userResponse = JSON.parse(body) as any;
+		expect(userResponse.username).toEqual(env.TEST_ORG!);
 	});
 });

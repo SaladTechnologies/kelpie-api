@@ -3,18 +3,19 @@ import { error } from './utils/error';
 import * as jose from 'jose';
 import { listContainerGroups } from './utils/salad';
 import { createUser, getUserByUsername } from './db/users';
+import { Buffer } from 'node:buffer';
 
 export async function validateAuth(req: AuthedRequest, env: Env) {
 	const kelpieApiKey = req.headers.get(env.API_HEADER);
 	const saladApiKey = req.headers.get('Salad-Api-Key');
-	const saladOrg = req.headers.get('Salad-Organization-Name');
-	const saladProject = req.headers.get('Salad-Project-Name');
+	const saladOrg = req.headers.get('Salad-Organization');
+	const saladProject = req.headers.get('Salad-Project');
 	const authHeader = req.headers.get('Authorization');
 
 	if (saladApiKey && (!saladOrg || !saladProject)) {
-		return error(400, { error: 'Bad Request', message: 'Salad API Key requires Salad-Organization-Name and Salad-Project-Name headers' });
+		return error(400, { error: 'Bad Request', message: 'Salad API Key requires Salad-Organization and Salad-Project headers' });
 	} else if (authHeader && !saladProject) {
-		return error(400, { error: 'Bad Request', message: 'Bearer Token requires Salad-Project-Name header' });
+		return error(400, { error: 'Bad Request', message: 'Bearer Token requires Salad-Project header' });
 	}
 
 	if (kelpieApiKey) {
@@ -33,7 +34,7 @@ export async function validateAuth(req: AuthedRequest, env: Env) {
 		/**
 		 * If a user includes a Salad API Key, we check if we have a cached user ID and organization.
 		 */
-		let idAndOrg = await env.user_tokens.get(`${saladApiKey}|${saladProject}`);
+		let idAndOrg = await env.user_tokens.get(`${saladApiKey}|${saladOrg}|${saladProject}`);
 		if (idAndOrg) {
 			const [id, org, project] = idAndOrg.split('|');
 			req.userId = id;

@@ -11,11 +11,6 @@ beforeAll(async () => {
 	token = t;
 });
 
-afterAll(async () => {
-	await clearUsers();
-	await clearScalingRules();
-});
-
 async function createScalingRule(overrides: any = {}): Promise<any> {
 	const rule = {
 		container_group_id: '014cfb51-fad8-4d9a-a058-68c24477f494',

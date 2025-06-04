@@ -19,6 +19,10 @@ export interface Env {
 	token_cache: KVNamespace;
 
 	DB: D1Database;
+
+	TEST_API_KEY?: string;
+	TEST_ORG?: string;
+	TEST_ORG_ID?: string;
 }
 
 export const SaladDataSchema = z.object({
