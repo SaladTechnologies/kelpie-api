@@ -15,7 +15,7 @@ import {
 	ListJobs,
 	ClearJobs,
 } from './routes/jobs';
-import { CreateUser, CreateToken, ClearUsers } from './routes/users';
+import { CreateUser, CreateToken, ClearUsers, GetUser } from './routes/users';
 import {
 	CreateScalingRule,
 	UpdateScalingRule,
@@ -73,6 +73,8 @@ router.patch('/scaling-rules/:id', UpdateScalingRule);
 router.get('/scaling-rules', ListScalingRules);
 router.get('/scaling-rules/:id', GetScalingRule);
 router.delete('/scaling-rules/:id', DeleteScalingRule);
+
+router.get('/users/me', GetUser);
 
 router.delete('/jobs', adminOnly, ClearJobs);
 router.post('/users', adminOnly, CreateUser);

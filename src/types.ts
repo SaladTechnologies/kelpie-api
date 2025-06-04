@@ -137,6 +137,13 @@ export const APIScalingRuleResponseSchema = APIScalingRuleSchema.merge(
 	})
 );
 
+export const UserResponseSchema = z.object({
+	id: z.string().uuid(),
+	username: z.string(),
+	created: z.date(),
+});
+export type UserResponse = z.infer<typeof UserResponseSchema>;
+
 export interface AuthedRequest extends Request {
 	userId?: string;
 	saladOrg?: string;

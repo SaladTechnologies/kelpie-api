@@ -1,5 +1,5 @@
 import { expect, it, describe, beforeAll, afterAll } from 'vitest';
-import { adminToken, clearUsers } from '../utils/test';
+import { adminToken, clearUsers, createUser } from '../utils/test';
 
 beforeAll(clearUsers);
 afterAll(clearUsers);
@@ -53,5 +53,35 @@ describe('POST /users/:id/token', () => {
 
 		const { token } = (await response.json()) as any;
 		expect(token).toBeDefined();
+	});
+});
+
+describe('GET /users/me', () => {
+	let user: any;
+	let token: string;
+	beforeAll(async () => {
+		await clearUsers();
+		const { user: u, token: t } = await createUser('testuser-jobs');
+		user = u;
+		token = t;
+	});
+
+	afterAll(async () => {
+		await clearUsers();
+	});
+	it('Returns the current user', async () => {
+		const response = await fetch('http://localhost:8787/users/me', {
+			method: 'GET',
+			headers: {
+				'X-Kelpie-Key': token,
+			},
+		});
+
+		const body = await response.text();
+
+		expect(response.status).toEqual(200);
+
+		const userResponse = JSON.parse(body) as any;
+		expect(userResponse).toMatchObject(user);
 	});
 });
