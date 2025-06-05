@@ -15,7 +15,7 @@ import {
 	ListJobs,
 	ClearJobs,
 } from './routes/jobs';
-import { CreateUser, CreateToken, ClearUsers } from './routes/users';
+import { CreateUser, CreateToken, ClearUsers, GetUser } from './routes/users';
 import {
 	CreateScalingRule,
 	UpdateScalingRule,
@@ -31,7 +31,7 @@ const router = OpenAPIRouter({
 		info: {
 			title: '🐕 Kelpie API',
 			description: 'API for running long jobs on Salad',
-			version: '0.6.0',
+			version: '0.6.4',
 		},
 	},
 });
@@ -46,6 +46,16 @@ router.registry.registerComponent('securitySchemes', 'apiKey', {
 	type: 'apiKey',
 	in: 'header',
 	name: 'X-Kelpie-Key',
+});
+router.registry.registerComponent('securitySchemes', 'saladApiKey', {
+	type: 'apiKey',
+	in: 'header',
+	name: 'Salad-Api-Key',
+});
+router.registry.registerComponent('securitySchemes', 'jwt', {
+	type: 'http',
+	scheme: 'bearer',
+	bearerFormat: 'JWT',
 });
 
 router.post('/jobs', CreateJob);
@@ -64,6 +74,8 @@ router.get('/scaling-rules', ListScalingRules);
 router.get('/scaling-rules/:id', GetScalingRule);
 router.delete('/scaling-rules/:id', DeleteScalingRule);
 
+router.get('/users/me', GetUser);
+
 router.delete('/jobs', adminOnly, ClearJobs);
 router.post('/users', adminOnly, CreateUser);
 router.post('/users/:id/token', adminOnly, CreateToken);
@@ -74,6 +86,7 @@ class CatchAll extends OpenAPIRoute {
 	static schema = {
 		summary: 'Catch All',
 		description: 'Catch all for unmatched routes',
+		security: [{ apiKey: [], jwt: [], saladApiKey: [] }],
 		responses: {
 			'404': {
 				description: 'Not Found',

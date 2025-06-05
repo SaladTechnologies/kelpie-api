@@ -20,7 +20,7 @@ export class CreateScalingRule extends OpenAPIRoute {
 	static schema = {
 		summary: 'Create a new scaling rule',
 		description: 'Create a new scaling rule',
-		security: [{ apiKey: [] }],
+		security: [{ apiKey: [], jwt: [], saladApiKey: [] }],
 		requestBody: APIScalingRuleSchema,
 		responses: {
 			'201': {
@@ -90,7 +90,7 @@ export class UpdateScalingRule extends OpenAPIRoute {
 	static schema = {
 		summary: 'Update an existing scaling rule',
 		description: 'Update an existing scaling rule',
-		security: [{ apiKey: [] }],
+		security: [{ apiKey: [], jwt: [], saladApiKey: [] }],
 		parameters: {
 			id: Path(String, { description: 'Container Group ID', required: true }),
 		},
@@ -152,7 +152,7 @@ export class ClearScalingRules extends OpenAPIRoute {
 	static schema = {
 		summary: '(ADMIN) Clear all scaling rules',
 		description: 'Clear all scaling rules',
-		security: [{ apiKey: [] }],
+		security: [{ apiKey: [], jwt: [], saladApiKey: [] }],
 		responses: {
 			'204': {
 				description: 'Scaling rules cleared',
@@ -193,7 +193,7 @@ export class ListScalingRules extends OpenAPIRoute {
 	static schema = {
 		summary: 'List all scaling rules',
 		description: 'List all scaling rules',
-		security: [{ apiKey: [] }],
+		security: [{ apiKey: [], jwt: [], saladApiKey: [] }],
 		responses: {
 			'200': {
 				description: 'Scaling rules listed',
@@ -239,7 +239,7 @@ export class GetScalingRule extends OpenAPIRoute {
 	static schema = {
 		summary: 'Get a scaling rule',
 		description: 'Get a scaling rule',
-		security: [{ apiKey: [] }],
+		security: [{ apiKey: [], jwt: [], saladApiKey: [] }],
 		parameters: {
 			id: Path(String, { description: 'Container Group ID', required: true }),
 		},
@@ -292,7 +292,7 @@ export class DeleteScalingRule extends OpenAPIRoute {
 	static schema = {
 		summary: 'Delete a scaling rule',
 		description: 'Delete a scaling rule',
-		security: [{ apiKey: [] }],
+		security: [{ apiKey: [], jwt: [], saladApiKey: [] }],
 		parameters: {
 			id: Path(String, { description: 'Container Group ID', required: true }),
 		},

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "deploy": "wrangler deploy",
-    "start": "wrangler dev",
+    "start": "wrangler -c wrangler.dev.toml dev",
     "test": "vitest run --no-file-parallelism"
   },
   "devDependencies": {
@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@cloudflare/itty-router-openapi": "^1.0.10",
+    "jose": "5.10.0",
     "zod": "^3.22.4"
   }
 }

@@ -1,5 +1,6 @@
 import { expect, it, describe, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { adminToken, clearJobs, clearUsers, createUser } from '../utils/test';
+import { env } from 'cloudflare:test';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -11,11 +12,6 @@ beforeAll(async () => {
 	const { user: u, token: t } = await createUser('testuser-jobs');
 	user = u;
 	token = t;
-});
-
-afterAll(async () => {
-	await clearJobs();
-	await clearUsers();
 });
 
 async function queueJob(overrides: any = {}) {
@@ -111,6 +107,52 @@ describe('POST /jobs', () => {
 			],
 		});
 		expect(input_bucket).toBeUndefined();
+	});
+
+	it('Jobs submitted with an API key are picked up by workers with a JWT', async () => {
+		const response = await fetch('http://localhost:8787/jobs', {
+			method: 'POST',
+			headers: {
+				'Salad-Api-Key': env.TEST_API_KEY!,
+				'Content-Type': 'application/json',
+				'Salad-Organization': env.TEST_ORG!,
+				'Salad-Project': 'default',
+			},
+			body: JSON.stringify({
+				command: 'python',
+				arguments: ['/app/main.py'],
+				sync: {
+					before: [
+						{
+							bucket: 'testbucket',
+							prefix: 'before/',
+							local_path: '/app/before',
+							direction: 'download',
+						},
+					],
+				},
+				container_group_id: 'testgroup123',
+			}),
+		});
+
+		let body = await response.text();
+
+		expect(response.status).toEqual(202);
+
+		const job = JSON.parse(body) as any;
+		expect(job.id).toBeDefined();
+
+		const workResp = await fetch(`http://localhost:8787/work?machine_id=123&container_group_id=testgroup123`, {
+			headers: {
+				Authorization: `Bearer ${env.TEST_JWT}`,
+				'Salad-Project': 'default',
+			},
+		});
+
+		expect(workResp.status).toEqual(200);
+		const work = (await workResp.json()) as any[];
+		expect(work).toHaveLength(1);
+		expect(work[0].id).toEqual(job.id);
 	});
 });
 

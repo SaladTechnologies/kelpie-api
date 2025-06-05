@@ -1,18 +1,29 @@
 import { z } from 'zod';
+import { JWTPayload } from 'jose';
 
 export interface Env {
 	API_HEADER: string;
 	MAX_FAILURES_PER_WORKER: string;
 	SALAD_API_KEY: string;
+	SALAD_PASSWORD: string;
 	ADMIN_ID: string;
+	AUTH_URL: string;
+	JWKS_URL: string;
+	TOKEN_CACHE_TTL: string;
+	JWKS_CACHE_TTL: string;
+	SALAD_USERNAME: string;
 
-	upload_tokens: KVNamespace;
-	download_tokens: KVNamespace;
 	user_tokens: KVNamespace;
 	banned_workers: KVNamespace;
 	salad_cache: KVNamespace;
+	token_cache: KVNamespace;
 
 	DB: D1Database;
+
+	TEST_API_KEY?: string;
+	TEST_ORG?: string;
+	TEST_ORG_ID?: string;
+	TEST_JWT?: string;
 }
 
 export const SaladDataSchema = z.object({
@@ -131,6 +142,13 @@ export const APIScalingRuleResponseSchema = APIScalingRuleSchema.merge(
 	})
 );
 
+export const UserResponseSchema = z.object({
+	id: z.string().uuid(),
+	username: z.string(),
+	created: z.date(),
+});
+export type UserResponse = z.infer<typeof UserResponseSchema>;
+
 export interface AuthedRequest extends Request {
 	userId?: string;
 	saladOrg?: string;
@@ -223,3 +241,19 @@ export type Instance = {
 export type InstanceList = {
 	instances: Instance[];
 };
+
+export interface ApiKeyValidationResponse {
+	is_api_key_valid: boolean;
+	is_organization_name_valid: boolean;
+	is_entitled: boolean;
+	organization_id: string;
+	organization_name: string;
+}
+
+export interface SaladJWTPayload extends JWTPayload {
+	salad_machine_id: string;
+	salad_organization_id: string;
+	salad_organization_name: string;
+	salad_workload_id: string;
+	salad_workload_name: string;
+}
