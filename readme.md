@@ -509,10 +509,11 @@ All query parameters for this endpoint are optional.
 3. Once it receives a job, kelpie downloads anything in `.sync.before`.
 4. Once required files are downloaded, kelpie executes your command with the provided arguments, adding environment variables as documented above.
 5. Whenever files are added to a directory configured in `.sync.during`, kelpie syncs the directory to the checkpoint bucket and prefix.
-6. When your command exits 0, the job is marked as complete, and a webhook is sent (if configured) to notify you about the job's completion.
+6. While the job is running, kelpie will periodically send a heartbeat to the API to indicate that the job is still running. This is used to detect if the job has been interrupted or failed, as well as to tell the worker if the job has been canceled.
+7. When your command exits 0, the job is marked as complete, and a webhook is sent (if configured) to notify you about the job's completion.
    1. If your job has a `.sync.after` configured, kelpie will upload the contents of that directory to the configured bucket and prefix before marking the job as complete.
    2. If your job fails, meaning exits non-0, it will be reported as a failure to the api. When this occurs, the number of failures for the job is incremented, up to 3. The machine id reporting the failure will be blocked from receiving that job again. If the job fails 3 times, it is marked failed, and a webhook is sent, if configured. If a machine id is blocked from 5 jobs, the container will be reallocated to a different machine, provided you have added the kelpie user to your salad org.
-7. All configured directories in `.sync` are wiped out to reset for the next job.
+8. All configured directories in `.sync` are wiped out to reset for the next job.
 
 ## Status Webhooks
 
