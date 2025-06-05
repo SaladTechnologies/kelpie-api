@@ -43,3 +43,28 @@ export async function getUserByUsername(env: Env, username: string): Promise<DBU
 export async function clearAllNonAdminUsers(env: Env): Promise<void> {
 	await env.DB.prepare('DELETE FROM Users WHERE id != ?').bind(env.ADMIN_ID).run();
 }
+
+export async function clearAllNonAdminUserTokens(env: Env): Promise<void> {
+	let cursor: string | undefined;
+
+	const deletePromises: Promise<void>[] = [];
+	do {
+		let tokens = await env.user_tokens.list({ cursor });
+
+		if (!tokens.list_complete) {
+			cursor = tokens.cursor;
+		} else {
+			cursor = undefined;
+		}
+
+		for (const keyObj of tokens.keys) {
+			const val = await env.user_tokens.get(keyObj.name);
+			const [userId, orgName, projectName] = val?.split('|') || [];
+			if (userId !== env.ADMIN_ID) {
+				deletePromises.push(env.user_tokens.delete(keyObj.name));
+			}
+		}
+	} while (cursor);
+
+	await Promise.all(deletePromises);
+}

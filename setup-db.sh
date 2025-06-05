@@ -15,7 +15,7 @@ for file in ./schemas/*.sql; do
     npx wrangler d1 execute kelpie $d1_env --file=$file
 done
 
-npx wrangler kv:key put $admin_token "00000000-0000-0000-0000-000000000000|<ROOT>|<ROOT>" --binding user_tokens $kv_env
+npx wrangler kv key put $admin_token "00000000-0000-0000-0000-000000000000|<ROOT>|<ROOT>" --binding user_tokens $kv_env
 
 echo "==Admin token=="
 echo "$admin_token"

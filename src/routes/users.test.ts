@@ -110,4 +110,37 @@ describe('GET /users/me', () => {
 		const userResponse = JSON.parse(body) as any;
 		expect(userResponse.username).toEqual(env.TEST_ORG!);
 	});
+
+	it('Returns the same user for jwt and api key if they match', async () => {
+		expect(env.TEST_API_KEY).toBeDefined();
+		expect(env.TEST_ORG).toBeDefined();
+		expect(env.TEST_JWT).toBeDefined();
+		const response1 = await fetch('http://localhost:8787/users/me', {
+			method: 'GET',
+			headers: {
+				Authorization: `Bearer ${env.TEST_JWT!}`,
+				'Salad-Project': 'default',
+			},
+		});
+
+		const body1 = await response1.text();
+		expect(response1.status).toEqual(200);
+		const userResponse1 = JSON.parse(body1) as any;
+		expect(userResponse1.username).toEqual(env.TEST_ORG!);
+
+		const response2 = await fetch('http://localhost:8787/users/me', {
+			method: 'GET',
+			headers: {
+				'Salad-Api-Key': env.TEST_API_KEY!,
+				'Salad-Organization': env.TEST_ORG!,
+				'Salad-Project': 'default',
+			},
+		});
+		const body2 = await response2.text();
+		expect(response2.status).toEqual(200);
+		const userResponse2 = JSON.parse(body2) as any;
+		expect(userResponse2.username).toEqual(env.TEST_ORG!);
+
+		expect(userResponse1.id).toEqual(userResponse2.id);
+	});
 });

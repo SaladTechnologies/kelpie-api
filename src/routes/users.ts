@@ -1,7 +1,7 @@
 import { OpenAPIRoute, Path } from '@cloudflare/itty-router-openapi';
 import { error } from '../utils/error';
 import { AuthedRequest, Env, UserResponseSchema } from '../types';
-import { createUser, getUserById, getUserByUsername, clearAllNonAdminUsers } from '../db/users';
+import { createUser, getUserById, getUserByUsername, clearAllNonAdminUsers, clearAllNonAdminUserTokens } from '../db/users';
 
 export class CreateUser extends OpenAPIRoute {
 	static schema = {
@@ -168,6 +168,7 @@ export class ClearUsers extends OpenAPIRoute {
 	async handle(request: AuthedRequest, env: Env, ctx: any) {
 		try {
 			await clearAllNonAdminUsers(env);
+			await clearAllNonAdminUserTokens(env);
 			return new Response(null, { status: 204 });
 		} catch (e: any) {
 			console.log(e);
