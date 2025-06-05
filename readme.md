@@ -50,6 +50,10 @@ Additionally, your script must support the following things:
 
 ## API Authorization
 
+### Base URL
+
+All API requests should use a base url of `https://kelpie.saladexamples.com`.
+
 ### Salad API Key
 
 You will use your Salad API Key in the `Salad-Api-Key` header for all requests to the Kelpie API. This is used to authenticate you as a Salad user, and to authorize you to use the Kelpie API.
@@ -75,13 +79,38 @@ All requests to the Kelpie API must include the header:
 
 `X-Kelpie-Key: myapikey`
 
-### Base URL
+And you must include `KELPIE_API_KEY` in your environment variables when running the kelpie worker.
 
-All API requests should use a base url of `https://kelpie.saladexamples.com`.
 
 ## Queueing a job
 
-Queueing a job for processing is a simple post request to the Kelpie API
+Queueing a job for processing is a post request to the Kelpie API.
+
+This request will create a job in the Kelpie API, which will then be picked up by a Kelpie worker running on a Salad Container Group.
+
+A Kelpie job definition consists of the following fields:
+
+- `container_group_id`: The ID of the container group to run the job in. This works effectively as a queue id, with kelpie workers being able to automatically determine which jobs to run based on the container group they are running in. This is useful for ensuring that jobs are only run on the correct container group.
+- `command`: The command to run in the container. This is the main entrypoint for your job.
+- `arguments`: An array of arguments to pass to the command. This is passed as a list of strings.
+- `environment`: An object containing environment variables to set for the job. The parent environment of the container is also passed to the job, with this block taking precedence in the event of a conflict.
+- `sync`: An object containing the sync configuration for the job. This is used to download and upload files to/from your bucket storage.
+  - `before`: An array of objects specifying files to download before the job starts. Each object should contain:
+    - `bucket`: The name of the bucket to download from.
+    - `prefix`: The prefix of the files to download.
+    - `local_path`: The local path to download the files to.
+    - `direction`: Should be "download".
+  - `during`: An array of objects specifying files to upload during the job. Each object should contain:
+    - `bucket`: The name of the bucket to upload to.
+    - `prefix`: The prefix of the files to upload.
+    - `local_path`: The local path to upload the files from.
+    - `direction`: Should be "upload".
+  - `after`: An array of objects specifying files to upload after the job completes. Each object should contain:
+    - `bucket`: The name of the bucket to upload to.
+    - `prefix`: The prefix of the files to upload.
+    - `local_path`: The local path to upload the files from.
+    - `direction`: Should be "upload".
+- `webhook`: An optional URL to send a webhook to when the job starts, completes, or fails. This is useful for monitoring the status of your job.
 
 ### `POST /jobs`
 
@@ -191,6 +220,125 @@ Queueing a job for processing is a simple post request to the Kelpie API
   "container_group_id": "97f504e8-6de6-4322-b5d5-1777a59a7ad3",
   "machine_id": null
 }
+```
+
+### POST /jobs/batch
+
+You can submit up to 1000 jobs at a time using the `/jobs/batch` endpoint. This is useful for bulk job submission.
+
+**Request Body**
+
+The request body is an array of job definitions, similar to the single job submission above. Each job definition should have the same structure as the single job submission.
+
+```json
+[
+  {
+    "command": "python",
+    "arguments": [
+      "/path/to/main.py",
+      "--arg",
+      "value"
+    ],
+    "environment": { "SOME_VAR": "string"},
+    "sync": {
+      "before": [
+        {
+          "bucket": "my-bucket",
+          "prefix": "inputs/job1/",
+          "local_path": "inputs/",
+          "direction": "download"
+        },
+        {
+          "bucket": "my-bucket",
+          "prefix": "checkpoints/job1/",
+          "local_path": "checkpoints/",
+          "direction": "download"
+        }
+      ],
+      "during": [
+        {
+          "bucket": "my-bucket",
+          "prefix": "checkpoints/job1/",
+          "local_path": "checkpoints/",
+          "direction": "upload"
+        }
+      ],
+      "after": [
+        {
+          "bucket": "my-bucket",
+          "prefix": "outputs/job1/",
+          "local_path": "outputs/",
+          "direction": "upload"
+        }
+      ]
+    },
+    "webhook": null,
+    "container_group_id": null
+  }
+]
+```
+
+**Response Body**
+
+The response body is an array of job definitions, similar to the single job submission response. Each job definition will have an `id` field added, which is the unique identifier for the job.
+
+```json
+[
+  {
+    "id": "8b9c902c-7da6-4af3-be0b-59cd4487895a",
+    "user_id": "your-user-id",
+    "status": "pending",
+    "created": "2024-04-19T18:53:31.000Z",
+    "started": null,
+    "completed": null,
+    "canceled": null,
+    "failed": null,
+    "command": "python",
+    "arguments": [
+      "/path/to/main.py",
+      "--arg",
+      "value"
+    ],
+    "environment": { "SOME_VAR": "string"},
+    "sync": {
+      "before": [
+        {
+          "bucket": "my-bucket",
+          "prefix": "inputs/job1/",
+          "local_path": "inputs/",
+          "direction": "download"
+        },
+        {
+          "bucket": "my-bucket",
+          "prefix": "checkpoints/job1/",
+          "local_path": "checkpoints/",
+          "direction": "download"
+        }
+      ],
+      "during": [
+        {
+          "bucket": "my-bucket",
+          "prefix": "checkpoints/job1/",
+          "local_path": "checkpoints/",
+          "direction": "upload"
+        }
+      ],
+      "after": [
+        {
+          "bucket": "my-bucket",
+          "prefix": "outputs/job1/",
+          "local_path": "outputs/",
+          "direction": "upload"
+        }
+      ]
+    },
+    "webhook": null,
+    "heartbeat": null,
+    "num_failures": 0,
+    "container_group_id": null,
+    "machine_id": null
+  }
+]
 ```
 
 ## Canceling a job
