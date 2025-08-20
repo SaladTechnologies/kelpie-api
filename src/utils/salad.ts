@@ -2,6 +2,22 @@ import { Env, SaladContainerGroup, ListContainerGroupsResponse, InstanceList } f
 
 const saladBaseUrl = 'https://api.salad.com/api/public';
 
+export function sleep(ms: number): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export async function fetchWithRetries(url: string, options: RequestInit, retries: number = 3): Promise<Response> {
+	for (let i = 0; i < retries; i++) {
+		const response = await fetch(url, options);
+		if (response.ok) {
+			return response;
+		}
+		console.log(`Fetch failed (attempt ${i + 1}): ${response.status}`);
+		await sleep(1000 * (i + 1));
+	}
+	throw new Error(`Failed to fetch ${url} after ${retries} attempts`);
+}
+
 export async function listContainerGroups(env: Env, orgName: string, projectName: string, noCache = false): Promise<SaladContainerGroup[]> {
 	// Check to see if we cached the value already
 	if (!noCache) {
@@ -11,9 +27,11 @@ export async function listContainerGroups(env: Env, orgName: string, projectName
 		}
 	}
 
+	const maxRetries = parseInt(env.MAX_SALAD_API_RETRIES) || 3;
+
 	// Fetch the container groups from Salad
 	const url = `${saladBaseUrl}/organizations/${orgName}/projects/${projectName}/containers`;
-	const response = await fetch(url, { headers: { 'Salad-Api-Key': env.SALAD_API_KEY } });
+	const response = await fetchWithRetries(url, { headers: { 'Salad-Api-Key': env.SALAD_API_KEY } }, maxRetries);
 	if (!response.ok) {
 		console.log(`Failed to fetch container groups in project ${orgName}/${projectName}: ${response.status}`);
 		console.log(await response.text());
@@ -62,14 +80,19 @@ export async function reallocateInstance(
 	containerGroupName: string,
 	machineId: string
 ): Promise<void> {
+	const maxRetries = parseInt(env.MAX_SALAD_API_RETRIES) || 3;
 	const url = `${saladBaseUrl}/organizations/${orgName}/projects/${projectName}/containers/${containerGroupName}/instances/${machineId}/reallocate`;
-	const response = await fetch(url, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			'Salad-Api-Key': env.SALAD_API_KEY,
+	const response = await fetchWithRetries(
+		url,
+		{
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				'Salad-Api-Key': env.SALAD_API_KEY,
+			},
 		},
-	});
+		maxRetries
+	);
 	if (!response.ok) {
 		if (response.status === 400) {
 			const errorResponse = await response.text();
@@ -82,13 +105,18 @@ export async function reallocateInstance(
 }
 
 export async function stopContainerGroup(env: Env, orgName: string, projectName: string, containerGroupName: string): Promise<void> {
+	const maxRetries = parseInt(env.MAX_SALAD_API_RETRIES) || 3;
 	const url = `https://api.salad.com/api/public/organizations/${orgName}/projects/${projectName}/containers/${containerGroupName}/stop`;
-	const stopResponse = await fetch(url, {
-		method: 'POST',
-		headers: {
-			'Salad-Api-Key': env.SALAD_API_KEY,
+	const stopResponse = await fetchWithRetries(
+		url,
+		{
+			method: 'POST',
+			headers: {
+				'Salad-Api-Key': env.SALAD_API_KEY,
+			},
 		},
-	});
+		maxRetries
+	);
 	if (!stopResponse.ok) {
 		if (stopResponse.status === 400) {
 			const errorResponse = await stopResponse.text();
@@ -102,13 +130,18 @@ export async function stopContainerGroup(env: Env, orgName: string, projectName:
 }
 
 export async function startContainerGroup(env: Env, orgName: string, projectName: string, containerGroupName: string): Promise<void> {
+	const maxRetries = parseInt(env.MAX_SALAD_API_RETRIES) || 3;
 	const url = `https://api.salad.com/api/public/organizations/${orgName}/projects/${projectName}/containers/${containerGroupName}/start`;
-	const startResponse = await fetch(url, {
-		method: 'POST',
-		headers: {
-			'Salad-Api-Key': env.SALAD_API_KEY,
+	const startResponse = await fetchWithRetries(
+		url,
+		{
+			method: 'POST',
+			headers: {
+				'Salad-Api-Key': env.SALAD_API_KEY,
+			},
 		},
-	});
+		maxRetries
+	);
 	if (!startResponse.ok) {
 		if (startResponse.status === 400) {
 			const errorResponse = await startResponse.text();
@@ -127,12 +160,17 @@ export async function listContainerGroupInstances(
 	projectName: string,
 	containerGroupName: string
 ): Promise<InstanceList> {
+	const maxRetries = parseInt(env.MAX_SALAD_API_RETRIES) || 3;
 	const url = `https://api.salad.com/api/public/organizations/${orgName}/projects/${projectName}/containers/${containerGroupName}/instances`;
-	const response = await fetch(url, {
-		headers: {
-			'Salad-Api-Key': env.SALAD_API_KEY,
+	const response = await fetchWithRetries(
+		url,
+		{
+			headers: {
+				'Salad-Api-Key': env.SALAD_API_KEY,
+			},
 		},
-	});
+		maxRetries
+	);
 	if (!response.ok) {
 		if (response.status === 400) {
 			const errorResponse = await response.text();
@@ -153,16 +191,21 @@ export async function setContainerGroupReplicas(
 	containerGroupName: string,
 	numReplicas: number
 ): Promise<void> {
+	const maxRetries = parseInt(env.MAX_SALAD_API_RETRIES) || 3;
 	const url = `https://api.salad.com/api/public/organizations/${orgName}/projects/${projectName}/containers/${containerGroupName}`;
-	const response = await fetch(url, {
-		method: 'PATCH',
-		headers: {
-			'Content-Type': 'application/merge-patch+json',
-			Accept: 'application/merge-patch+json',
-			'Salad-Api-Key': env.SALAD_API_KEY,
+	const response = await fetchWithRetries(
+		url,
+		{
+			method: 'PATCH',
+			headers: {
+				'Content-Type': 'application/merge-patch+json',
+				Accept: 'application/merge-patch+json',
+				'Salad-Api-Key': env.SALAD_API_KEY,
+			},
+			body: JSON.stringify({ replicas: numReplicas }),
 		},
-		body: JSON.stringify({ replicas: numReplicas }),
-	});
+		maxRetries
+	);
 	if (!response.ok) {
 		if (response.status === 400) {
 			const errorResponse = await response.text();
@@ -181,12 +224,17 @@ export async function getContainerGroupByName(
 	projectName: string,
 	containerGroupName: string
 ): Promise<SaladContainerGroup | null> {
+	const maxRetries = parseInt(env.MAX_SALAD_API_RETRIES) || 3;
 	const url = `https://api.salad.com/api/public/organizations/${orgName}/projects/${projectName}/containers/${containerGroupName}`;
-	const response = await fetch(url, {
-		headers: {
-			'Salad-Api-Key': env.SALAD_API_KEY,
+	const response = await fetchWithRetries(
+		url,
+		{
+			headers: {
+				'Salad-Api-Key': env.SALAD_API_KEY,
+			},
 		},
-	});
+		maxRetries
+	);
 	if (!response.ok) {
 		if (response.status === 400) {
 			const errorResponse = await response.text();

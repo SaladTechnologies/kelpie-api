@@ -7,9 +7,10 @@ export async function evaluateAllScalingRules(env: Env) {
 	const rules = await listScalingRules(env);
 	console.log(`Found ${rules.length} scaling rules`);
 
-	// Evaluate the rules batches of 5
-	for (let i = 0; i < rules.length; i += 5) {
-		await Promise.all(rules.slice(i, i + 5).map((rule) => evaluateScalingRule(env, rule)));
+	const maxConcurrentScalingRules = parseInt(env.MAX_CONCURRENT_SCALING_RULES) || 5;
+	// Evaluate the rules batches of maxConcurrentScalingRules
+	for (let i = 0; i < rules.length; i += maxConcurrentScalingRules) {
+		await Promise.all(rules.slice(i, i + maxConcurrentScalingRules).map((rule) => evaluateScalingRule(env, rule)));
 	}
 }
 

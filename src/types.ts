@@ -12,6 +12,8 @@ export interface Env {
 	TOKEN_CACHE_TTL: string;
 	JWKS_CACHE_TTL: string;
 	SALAD_USERNAME: string;
+	MAX_CONCURRENT_SCALING_RULES: string;
+	MAX_SALAD_API_RETRIES: string;
 
 	user_tokens: KVNamespace;
 	banned_workers: KVNamespace;
