@@ -7,15 +7,19 @@ export function sleep(ms: number): Promise<void> {
 }
 
 export async function fetchWithRetries(url: string, options: RequestInit, retries: number = 3): Promise<Response> {
+	let response: Response | undefined;
 	for (let i = 0; i < retries; i++) {
-		const response = await fetch(url, options);
-		if (response.ok) {
+		response = await fetch(url, options);
+		if (response.ok || response.status === 404) {
 			return response;
 		}
 		console.log(`Fetch failed (attempt ${i + 1}): ${response.status}`);
 		await sleep(1000 * (i + 1));
 	}
-	throw new Error(`Failed to fetch ${url} after ${retries} attempts`);
+	if (response) {
+		return response;
+	}
+	throw new Error(`Did not receive response from API after ${retries} attempts`);
 }
 
 export async function listContainerGroups(env: Env, orgName: string, projectName: string, noCache = false): Promise<SaladContainerGroup[]> {
