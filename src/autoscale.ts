@@ -47,6 +47,9 @@ export async function setReplicasForContainerGroup(
 	containerGroupName: string,
 	containerGroupID: string
 ) {
+	/**
+	 * This function returns null if it gets a 404 from the API
+	 */
 	const group = await getContainerGroupByName(env, orgName, projectName, containerGroupName);
 	if (!group) {
 		console.log(`Container group not found: ${orgName}/${projectName}/${containerGroupName}. Cleaning up scaling rule.`);
