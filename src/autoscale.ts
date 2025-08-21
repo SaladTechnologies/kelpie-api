@@ -1,5 +1,5 @@
 import { Env, DBScalingRule } from './types';
-import { listScalingRules } from './db/scaling-rules';
+import { listScalingRules, deleteScalingRuleByContainerGroupID } from './db/scaling-rules';
 import { countActiveAndRecentlyActiveJobsInContainerGroup } from './db/jobs';
 import { getContainerGroupByName, setContainerGroupReplicas, startContainerGroup, stopContainerGroup } from './utils/salad';
 
@@ -26,7 +26,14 @@ export async function evaluateScalingRule(env: Env, rule: DBScalingRule) {
 		console.log(
 			`Evaluating scaling rule ${rule.container_group_id} for container group ${rule.org_name}/${rule.project_name}/${rule.container_group_name}: ${numJobs} jobs, constrained to ${constrainedNumJobs} replicas`
 		);
-		await setReplicasForContainerGroup(env, constrainedNumJobs, rule.org_name, rule.project_name, rule.container_group_name);
+		await setReplicasForContainerGroup(
+			env,
+			constrainedNumJobs,
+			rule.org_name,
+			rule.project_name,
+			rule.container_group_name,
+			rule.container_group_id
+		);
 	} catch (error) {
 		console.error(`Error evaluating scaling rule ${rule.container_group_id}: ${error}`);
 	}
@@ -37,11 +44,16 @@ export async function setReplicasForContainerGroup(
 	numReplicas: number,
 	orgName: string,
 	projectName: string,
-	containerGroupName: string
+	containerGroupName: string,
+	containerGroupID: string
 ) {
+	/**
+	 * This function returns null if it gets a 404 from the API
+	 */
 	const group = await getContainerGroupByName(env, orgName, projectName, containerGroupName);
 	if (!group) {
-		console.log(`Container group not found: ${orgName}/${projectName}/${containerGroupName}`);
+		console.log(`Container group not found: ${orgName}/${projectName}/${containerGroupName}. Cleaning up scaling rule.`);
+		await deleteScalingRuleByContainerGroupID(env, containerGroupID);
 		return;
 	}
 
