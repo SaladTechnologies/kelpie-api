@@ -228,3 +228,19 @@ LIMIT ?
 	const { results } = await env.DB.prepare(query).bind(containerGroupId, idleThreshold, idleThreshold, idleThreshold, maxCount).all();
 	return results[0]['COUNT(*)'] as number;
 }
+
+export async function purgeJobsForContainerGroup(containerGroupId: string, userId: string, env: Env): Promise<number> {
+	// Pending jobs removed, running jobs cancelled
+	const operations = [
+		env.DB.prepare('DELETE FROM Jobs WHERE container_group_id = ? AND user_id = ? AND status = "pending"')
+			.bind(containerGroupId, userId)
+			.run(),
+		env.DB.prepare(
+			'UPDATE Jobs SET status = "canceled", canceled = datetime("now") WHERE container_group_id = ? AND status = "running" AND user_id = ?'
+		)
+			.bind(containerGroupId, userId)
+			.run(),
+	];
+	const results = await Promise.all(operations);
+	return results.reduce((acc, res) => acc + (res.success ? res.meta.rows_written || 0 : 0), 0);
+}

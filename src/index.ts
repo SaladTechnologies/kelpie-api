@@ -14,6 +14,7 @@ import {
 	JobHeartbeat,
 	ListJobs,
 	ClearJobs,
+	PurgeJobsForContainerGroup,
 } from './routes/jobs';
 import { CreateUser, CreateToken, ClearUsers, GetUser } from './routes/users';
 import {
@@ -63,6 +64,7 @@ router.post('/jobs/batch', BatchCreateJobs);
 router.get('/jobs', ListJobs);
 router.get('/jobs/:id', GetJob);
 router.delete('/jobs/:id', CancelJob);
+router.delete('/jobs/container-groups/:container_group_id', PurgeJobsForContainerGroup);
 router.get('/work', GetWork);
 router.post('/jobs/:id/completed', ReportJobCompleted);
 router.post('/jobs/:id/failed', ReportJobFailure);
