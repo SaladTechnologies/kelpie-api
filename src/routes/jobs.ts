@@ -22,6 +22,7 @@ import {
 	incrementFailedAttempts,
 	listJobsWithArbitraryFilter,
 	clearJobs,
+	purgeJobsForContainerGroup,
 } from '../db/jobs';
 import { reallocateInstance, getContainerGroupByID } from '../utils/salad';
 
@@ -862,6 +863,54 @@ export class ClearJobs extends OpenAPIRoute {
 		try {
 			await clearJobs(env);
 			return new Response(null, { status: 204 });
+		} catch (e: any) {
+			console.log(e);
+			return error(500, { error: 'Internal server error', message: e.message });
+		}
+	}
+}
+
+export class PurgeJobsForContainerGroup extends OpenAPIRoute {
+	static schema = {
+		summary: 'Purge jobs for a container group',
+		description: 'Remove all pending jobs and cancel running jobs for a container group',
+		security: [{ apiKey: [], jwt: [], saladApiKey: [] }],
+		parameters: {
+			container_group_id: Path(String, { description: 'Container Group ID', required: true }),
+		},
+		responses: {
+			'200': {
+				description: 'Jobs purged',
+				schema: {
+					count: Number,
+				},
+			},
+			'400': {
+				description: 'Invalid request',
+				schema: {
+					error: String,
+					message: String,
+				},
+			},
+			'500': {
+				description: 'Internal server error',
+				schema: {
+					error: String,
+					message: String,
+				},
+			},
+		},
+	};
+
+	async handle(request: AuthedRequest, env: Env, ctx: any, data: { params: { container_group_id: string } }) {
+		const { container_group_id } = data.params;
+		const { userId } = request;
+		if (!userId) {
+			return error(400, { error: 'User Required', message: 'No user ID found' });
+		}
+		try {
+			const count = await purgeJobsForContainerGroup(container_group_id, userId, env);
+			return { count };
 		} catch (e: any) {
 			console.log(e);
 			return error(500, { error: 'Internal server error', message: e.message });

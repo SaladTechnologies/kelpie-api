@@ -506,3 +506,37 @@ describe('GET /work', () => {
 		expect(job.id).toEqual(queuedJob.id);
 	});
 });
+
+describe('DELETE /jobs/container-groups/:container_group_id', () => {
+	beforeEach(clearJobs);
+	afterEach(clearJobs);
+
+	it('Purges all jobs for a container group', async () => {
+		const jobsToQueue = 3;
+		const queuedJobs = [];
+		for (let i = 0; i < jobsToQueue; i++) {
+			const resp = await queueJob({ container_group_id: 'purge-group' });
+			const queuedJob = (await resp.json()) as any;
+			queuedJobs.push(queuedJob);
+		}
+
+		const purgeResp = await fetch(`http://localhost:8787/jobs/container-groups/purge-group`, {
+			method: 'DELETE',
+			headers: {
+				'X-Kelpie-Key': token,
+			},
+		});
+		expect(purgeResp.status).toEqual(200);
+		const purgeBody = (await purgeResp.json()) as any;
+		expect(purgeBody.count).toEqual(jobsToQueue);
+
+		for (const job of queuedJobs) {
+			const jobResp = await fetch(`http://localhost:8787/jobs/${job.id}`, {
+				headers: {
+					'X-Kelpie-Key': token,
+				},
+			});
+			expect(jobResp.status).toEqual(404);
+		}
+	});
+});
