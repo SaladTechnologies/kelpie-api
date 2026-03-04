@@ -45,11 +45,14 @@ export async function validateAuth(req: AuthedRequest, env: Env) {
 			 * If we don't have a cached user ID, we need to validate the API Key.
 			 */
 			try {
-				const payload = await validateSaladApiKey(env, saladApiKey, saladOrg || '');
-				req.saladOrg = payload.organization_name;
-				payload.organization_id;
 				try {
-					await listContainerGroups(env, req.saladOrg, saladProject, true, saladApiKey);
+					const payload = await validateSaladApiKey(env, saladApiKey, saladOrg || '');
+					req.saladOrg = payload.organization_name;
+				} catch {
+					req.saladOrg = saladOrg;
+				}
+				try {
+					await listContainerGroups(env, req.saladOrg, saladProject, true, saladApiKey ?? undefined);
 					req.saladProject = saladProject;
 					/**
 					 * If everything is valid, we check to see if we have a user provisioned for this org already.
@@ -102,7 +105,7 @@ export async function validateAuth(req: AuthedRequest, env: Env) {
 				 * If we check to make sure the project exists and is valid.
 				 */
 				try {
-					await listContainerGroups(env, req.saladOrg, saladProject, true, saladApiKey);
+					await listContainerGroups(env, req.saladOrg, saladProject, true, saladApiKey ?? undefined);
 					req.saladProject = saladProject;
 
 					/**
