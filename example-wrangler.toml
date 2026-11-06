@@ -16,7 +16,14 @@ crons = ["*/5 * * * *"] # * * * * * = run every 5 minutes
 API_HEADER = "x-kelpie-key"
 MAX_FAILURES_PER_WORKER = "5"
 ADMIN_ID = "00000000-0000-0000-0000-000000000000"
-
+TOKEN_CACHE_TTL = "60"
+JWKS_CACHE_TTL = "600"
+MAX_SALAD_API_RETRIES = "3"
+AUTH_URL=""
+JWKS_URL=""
+MAX_CONCURRENT_SCALING_RULES="4"
+MAX_FAILURES_PER_WORKER="3"
+SALAD_USERNAME=""
 
 # Bind a KV Namespace. Use KV as persistent storage for small key-value pairs.
 # Docs: https://developers.cloudflare.com/workers/runtime-apis/kv
@@ -30,6 +37,10 @@ id = "330b9fef-d0b3-4061-962c-9f1a038f488c"
 
 [[kv_namespaces]]
 binding = "salad_cache"
+id = "fea342ad-1262-4264-8fe9-57a9984204d7"
+
+[[kv_namespaces]]
+binding = "token_cache"
 id = "fea342ad-1262-4264-8fe9-57a9984204d7"
 
 [[d1_databases]]

@@ -22,7 +22,7 @@ export async function fetchWithRetries(url: string, options: RequestInit, retrie
 	throw new Error(`Did not receive response from API after ${retries} attempts`);
 }
 
-export async function listContainerGroups(env: Env, orgName: string, projectName: string, noCache = false): Promise<SaladContainerGroup[]> {
+export async function listContainerGroups(env: Env, orgName: string, projectName: string, noCache = false, apiKey?: string): Promise<SaladContainerGroup[]> {
 	// Check to see if we cached the value already
 	if (!noCache) {
 		const cachedValue = await env.salad_cache.get(`${orgName}/${projectName}`);
@@ -35,7 +35,7 @@ export async function listContainerGroups(env: Env, orgName: string, projectName
 
 	// Fetch the container groups from Salad
 	const url = `${saladBaseUrl}/organizations/${orgName}/projects/${projectName}/containers`;
-	const response = await fetchWithRetries(url, { headers: { 'Salad-Api-Key': env.SALAD_API_KEY } }, maxRetries);
+	const response = await fetchWithRetries(url, { headers: { 'Salad-Api-Key': apiKey || env.SALAD_API_KEY } }, maxRetries);
 	if (!response.ok) {
 		console.log(`Failed to fetch container groups in project ${orgName}/${projectName}: ${response.status}`);
 		console.log(await response.text());
