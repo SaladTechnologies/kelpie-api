@@ -5,7 +5,9 @@
   "scripts": {
     "deploy": "wrangler deploy",
     "start": "wrangler -c wrangler.dev.toml dev",
-    "test": "vitest run --no-file-parallelism"
+    "test": "npm run test:autoscale && vitest run --no-file-parallelism",
+    "test:autoscale": "vitest run --config vitest.autoscale.config.js --no-file-parallelism",
+    "benchmark:autoscale": "python3 scripts/benchmark-autoscaler.py"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.8.32",

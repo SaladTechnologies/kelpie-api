@@ -1,0 +1,439 @@
+{
+  "generated_at_utc": "2026-11-06T16:47:58.122773+00:00",
+  "sqlite_version": "3.37.2",
+  "synthetic_rows": 1206007,
+  "historical_rows": 1200000,
+  "quiet_group_historical_rows": 900000,
+  "cap": 64,
+  "idle_threshold_seconds": 300,
+  "load_seconds": 3.293,
+  "notes": [
+    "Synthetic local in-memory SQLite, not production D1 latency or billed rows.",
+    "VM steps are interpreter operations, not rows_read; rounded down to multiples of 100.",
+    "Timing is median of warm runs without VM instrumentation.",
+    "All stages use the same dataset and assert identical bounded counts."
+  ],
+  "stages": [
+    {
+      "name": "live partial indexes / original query",
+      "index_build_ms": null,
+      "workloads": [
+        {
+          "group": "missing",
+          "result": 0,
+          "median_ms": 69.3017,
+          "vm_steps_approx": 3618000,
+          "plan": [
+            "CO-ROUTINE SUBQUERY 1",
+            "SCAN Jobs",
+            "SCAN SUBQUERY 1"
+          ]
+        },
+        {
+          "group": "quiet",
+          "result": 7,
+          "median_ms": 131.8604,
+          "vm_steps_approx": 15318100,
+          "plan": [
+            "CO-ROUTINE SUBQUERY 1",
+            "SCAN Jobs",
+            "SCAN SUBQUERY 1"
+          ]
+        },
+        {
+          "group": "busy_active",
+          "result": 64,
+          "median_ms": 69.4161,
+          "vm_steps_approx": 3600700,
+          "plan": [
+            "CO-ROUTINE SUBQUERY 1",
+            "SCAN Jobs",
+            "SCAN SUBQUERY 1"
+          ]
+        },
+        {
+          "group": "busy_recent",
+          "result": 64,
+          "median_ms": 68.6794,
+          "vm_steps_approx": 3607100,
+          "plan": [
+            "CO-ROUTINE SUBQUERY 1",
+            "SCAN Jobs",
+            "SCAN SUBQUERY 1"
+          ]
+        },
+        {
+          "group": "overlap",
+          "result": 64,
+          "median_ms": 69.333,
+          "vm_steps_approx": 3612700,
+          "plan": [
+            "CO-ROUTINE SUBQUERY 1",
+            "SCAN Jobs",
+            "SCAN SUBQUERY 1"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "comparison group-status index / original query",
+      "index_build_ms": 479.015,
+      "workloads": [
+        {
+          "group": "missing",
+          "result": 0,
+          "median_ms": 0.0014,
+          "vm_steps_approx": 0,
+          "plan": [
+            "CO-ROUTINE SUBQUERY 1",
+            "SEARCH Jobs USING INDEX idx_container_group_id_status (container_group_id=?)",
+            "SCAN SUBQUERY 1"
+          ]
+        },
+        {
+          "group": "quiet",
+          "result": 7,
+          "median_ms": 223.3823,
+          "vm_steps_approx": 14400200,
+          "plan": [
+            "CO-ROUTINE SUBQUERY 1",
+            "SEARCH Jobs USING INDEX idx_container_group_id_status (container_group_id=?)",
+            "SCAN SUBQUERY 1"
+          ]
+        },
+        {
+          "group": "busy_active",
+          "result": 64,
+          "median_ms": 0.007,
+          "vm_steps_approx": 700,
+          "plan": [
+            "CO-ROUTINE SUBQUERY 1",
+            "SEARCH Jobs USING INDEX idx_container_group_id_status (container_group_id=?)",
+            "SCAN SUBQUERY 1"
+          ]
+        },
+        {
+          "group": "busy_recent",
+          "result": 64,
+          "median_ms": 0.013,
+          "vm_steps_approx": 1000,
+          "plan": [
+            "CO-ROUTINE SUBQUERY 1",
+            "SEARCH Jobs USING INDEX idx_container_group_id_status (container_group_id=?)",
+            "SCAN SUBQUERY 1"
+          ]
+        },
+        {
+          "group": "overlap",
+          "result": 64,
+          "median_ms": 0.0048,
+          "vm_steps_approx": 700,
+          "plan": [
+            "CO-ROUTINE SUBQUERY 1",
+            "SEARCH Jobs USING INDEX idx_container_group_id_status (container_group_id=?)",
+            "SCAN SUBQUERY 1"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "timestamp indexes / bounded deduplicated query",
+      "index_build_ms": 628.692,
+      "workloads": [
+        {
+          "group": "missing",
+          "result": 0,
+          "median_ms": 0.006,
+          "vm_steps_approx": 200,
+          "plan": [
+            "CO-ROUTINE SUBQUERY 8",
+            "COMPOUND QUERY",
+            "LEFT-MOST SUBQUERY",
+            "CO-ROUTINE active_jobs",
+            "SEARCH Jobs USING INDEX idx_container_group_id_status (container_group_id=? AND status=?)",
+            "SCAN active_jobs",
+            "UNION USING TEMP B-TREE",
+            "CO-ROUTINE recently_completed",
+            "SEARCH Jobs USING COVERING INDEX idx_jobs_autoscale_completed (container_group_id=? AND completed>?)",
+            "SCAN recently_completed",
+            "UNION USING TEMP B-TREE",
+            "CO-ROUTINE recently_failed",
+            "SEARCH Jobs USING COVERING INDEX idx_jobs_autoscale_failed (container_group_id=? AND failed>?)",
+            "SCAN recently_failed",
+            "UNION USING TEMP B-TREE",
+            "CO-ROUTINE recently_canceled",
+            "SEARCH Jobs USING COVERING INDEX idx_jobs_autoscale_canceled (container_group_id=? AND canceled>?)",
+            "SCAN recently_canceled",
+            "SCAN SUBQUERY 8"
+          ]
+        },
+        {
+          "group": "quiet",
+          "result": 7,
+          "median_ms": 0.008,
+          "vm_steps_approx": 200,
+          "plan": [
+            "CO-ROUTINE SUBQUERY 8",
+            "COMPOUND QUERY",
+            "LEFT-MOST SUBQUERY",
+            "CO-ROUTINE active_jobs",
+            "SEARCH Jobs USING INDEX idx_container_group_id_status (container_group_id=? AND status=?)",
+            "SCAN active_jobs",
+            "UNION USING TEMP B-TREE",
+            "CO-ROUTINE recently_completed",
+            "SEARCH Jobs USING COVERING INDEX idx_jobs_autoscale_completed (container_group_id=? AND completed>?)",
+            "SCAN recently_completed",
+            "UNION USING TEMP B-TREE",
+            "CO-ROUTINE recently_failed",
+            "SEARCH Jobs USING COVERING INDEX idx_jobs_autoscale_failed (container_group_id=? AND failed>?)",
+            "SCAN recently_failed",
+            "UNION USING TEMP B-TREE",
+            "CO-ROUTINE recently_canceled",
+            "SEARCH Jobs USING COVERING INDEX idx_jobs_autoscale_canceled (container_group_id=? AND canceled>?)",
+            "SCAN recently_canceled",
+            "SCAN SUBQUERY 8"
+          ]
+        },
+        {
+          "group": "busy_active",
+          "result": 64,
+          "median_ms": 0.0207,
+          "vm_steps_approx": 1400,
+          "plan": [
+            "CO-ROUTINE SUBQUERY 8",
+            "COMPOUND QUERY",
+            "LEFT-MOST SUBQUERY",
+            "CO-ROUTINE active_jobs",
+            "SEARCH Jobs USING INDEX idx_container_group_id_status (container_group_id=? AND status=?)",
+            "SCAN active_jobs",
+            "UNION USING TEMP B-TREE",
+            "CO-ROUTINE recently_completed",
+            "SEARCH Jobs USING COVERING INDEX idx_jobs_autoscale_completed (container_group_id=? AND completed>?)",
+            "SCAN recently_completed",
+            "UNION USING TEMP B-TREE",
+            "CO-ROUTINE recently_failed",
+            "SEARCH Jobs USING COVERING INDEX idx_jobs_autoscale_failed (container_group_id=? AND failed>?)",
+            "SCAN recently_failed",
+            "UNION USING TEMP B-TREE",
+            "CO-ROUTINE recently_canceled",
+            "SEARCH Jobs USING COVERING INDEX idx_jobs_autoscale_canceled (container_group_id=? AND canceled>?)",
+            "SCAN recently_canceled",
+            "SCAN SUBQUERY 8"
+          ]
+        },
+        {
+          "group": "busy_recent",
+          "result": 64,
+          "median_ms": 0.0182,
+          "vm_steps_approx": 1200,
+          "plan": [
+            "CO-ROUTINE SUBQUERY 8",
+            "COMPOUND QUERY",
+            "LEFT-MOST SUBQUERY",
+            "CO-ROUTINE active_jobs",
+            "SEARCH Jobs USING INDEX idx_container_group_id_status (container_group_id=? AND status=?)",
+            "SCAN active_jobs",
+            "UNION USING TEMP B-TREE",
+            "CO-ROUTINE recently_completed",
+            "SEARCH Jobs USING COVERING INDEX idx_jobs_autoscale_completed (container_group_id=? AND completed>?)",
+            "SCAN recently_completed",
+            "UNION USING TEMP B-TREE",
+            "CO-ROUTINE recently_failed",
+            "SEARCH Jobs USING COVERING INDEX idx_jobs_autoscale_failed (container_group_id=? AND failed>?)",
+            "SCAN recently_failed",
+            "UNION USING TEMP B-TREE",
+            "CO-ROUTINE recently_canceled",
+            "SEARCH Jobs USING COVERING INDEX idx_jobs_autoscale_canceled (container_group_id=? AND canceled>?)",
+            "SCAN recently_canceled",
+            "SCAN SUBQUERY 8"
+          ]
+        },
+        {
+          "group": "overlap",
+          "result": 64,
+          "median_ms": 0.0532,
+          "vm_steps_approx": 3300,
+          "plan": [
+            "CO-ROUTINE SUBQUERY 8",
+            "COMPOUND QUERY",
+            "LEFT-MOST SUBQUERY",
+            "CO-ROUTINE active_jobs",
+            "SEARCH Jobs USING INDEX idx_container_group_id_status (container_group_id=? AND status=?)",
+            "SCAN active_jobs",
+            "UNION USING TEMP B-TREE",
+            "CO-ROUTINE recently_completed",
+            "SEARCH Jobs USING COVERING INDEX idx_jobs_autoscale_completed (container_group_id=? AND completed>?)",
+            "SCAN recently_completed",
+            "UNION USING TEMP B-TREE",
+            "CO-ROUTINE recently_failed",
+            "SEARCH Jobs USING COVERING INDEX idx_jobs_autoscale_failed (container_group_id=? AND failed>?)",
+            "SCAN recently_failed",
+            "UNION USING TEMP B-TREE",
+            "CO-ROUTINE recently_canceled",
+            "SEARCH Jobs USING COVERING INDEX idx_jobs_autoscale_canceled (container_group_id=? AND canceled>?)",
+            "SCAN recently_canceled",
+            "SCAN SUBQUERY 8"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "timestamp indexes without comparison group-status index / bounded query",
+      "index_build_ms": null,
+      "workloads": [
+        {
+          "group": "missing",
+          "result": 0,
+          "median_ms": 0.0055,
+          "vm_steps_approx": 100,
+          "plan": [
+            "CO-ROUTINE SUBQUERY 8",
+            "COMPOUND QUERY",
+            "LEFT-MOST SUBQUERY",
+            "CO-ROUTINE active_jobs",
+            "SEARCH Jobs USING INDEX idx_container_group_id_status (container_group_id=? AND status=?)",
+            "SCAN active_jobs",
+            "UNION USING TEMP B-TREE",
+            "CO-ROUTINE recently_completed",
+            "SEARCH Jobs USING COVERING INDEX idx_jobs_autoscale_completed (container_group_id=? AND completed>?)",
+            "SCAN recently_completed",
+            "UNION USING TEMP B-TREE",
+            "CO-ROUTINE recently_failed",
+            "SEARCH Jobs USING COVERING INDEX idx_jobs_autoscale_failed (container_group_id=? AND failed>?)",
+            "SCAN recently_failed",
+            "UNION USING TEMP B-TREE",
+            "CO-ROUTINE recently_canceled",
+            "SEARCH Jobs USING COVERING INDEX idx_jobs_autoscale_canceled (container_group_id=? AND canceled>?)",
+            "SCAN recently_canceled",
+            "SCAN SUBQUERY 8"
+          ]
+        },
+        {
+          "group": "quiet",
+          "result": 7,
+          "median_ms": 0.0072,
+          "vm_steps_approx": 300,
+          "plan": [
+            "CO-ROUTINE SUBQUERY 8",
+            "COMPOUND QUERY",
+            "LEFT-MOST SUBQUERY",
+            "CO-ROUTINE active_jobs",
+            "SEARCH Jobs USING INDEX idx_container_group_id_status (container_group_id=? AND status=?)",
+            "SCAN active_jobs",
+            "UNION USING TEMP B-TREE",
+            "CO-ROUTINE recently_completed",
+            "SEARCH Jobs USING COVERING INDEX idx_jobs_autoscale_completed (container_group_id=? AND completed>?)",
+            "SCAN recently_completed",
+            "UNION USING TEMP B-TREE",
+            "CO-ROUTINE recently_failed",
+            "SEARCH Jobs USING COVERING INDEX idx_jobs_autoscale_failed (container_group_id=? AND failed>?)",
+            "SCAN recently_failed",
+            "UNION USING TEMP B-TREE",
+            "CO-ROUTINE recently_canceled",
+            "SEARCH Jobs USING COVERING INDEX idx_jobs_autoscale_canceled (container_group_id=? AND canceled>?)",
+            "SCAN recently_canceled",
+            "SCAN SUBQUERY 8"
+          ]
+        },
+        {
+          "group": "busy_active",
+          "result": 64,
+          "median_ms": 0.02,
+          "vm_steps_approx": 1200,
+          "plan": [
+            "CO-ROUTINE SUBQUERY 8",
+            "COMPOUND QUERY",
+            "LEFT-MOST SUBQUERY",
+            "CO-ROUTINE active_jobs",
+            "SEARCH Jobs USING INDEX idx_container_group_id_status (container_group_id=? AND status=?)",
+            "SCAN active_jobs",
+            "UNION USING TEMP B-TREE",
+            "CO-ROUTINE recently_completed",
+            "SEARCH Jobs USING COVERING INDEX idx_jobs_autoscale_completed (container_group_id=? AND completed>?)",
+            "SCAN recently_completed",
+            "UNION USING TEMP B-TREE",
+            "CO-ROUTINE recently_failed",
+            "SEARCH Jobs USING COVERING INDEX idx_jobs_autoscale_failed (container_group_id=? AND failed>?)",
+            "SCAN recently_failed",
+            "UNION USING TEMP B-TREE",
+            "CO-ROUTINE recently_canceled",
+            "SEARCH Jobs USING COVERING INDEX idx_jobs_autoscale_canceled (container_group_id=? AND canceled>?)",
+            "SCAN recently_canceled",
+            "SCAN SUBQUERY 8"
+          ]
+        },
+        {
+          "group": "busy_recent",
+          "result": 64,
+          "median_ms": 0.018,
+          "vm_steps_approx": 1200,
+          "plan": [
+            "CO-ROUTINE SUBQUERY 8",
+            "COMPOUND QUERY",
+            "LEFT-MOST SUBQUERY",
+            "CO-ROUTINE active_jobs",
+            "SEARCH Jobs USING INDEX idx_container_group_id_status (container_group_id=? AND status=?)",
+            "SCAN active_jobs",
+            "UNION USING TEMP B-TREE",
+            "CO-ROUTINE recently_completed",
+            "SEARCH Jobs USING COVERING INDEX idx_jobs_autoscale_completed (container_group_id=? AND completed>?)",
+            "SCAN recently_completed",
+            "UNION USING TEMP B-TREE",
+            "CO-ROUTINE recently_failed",
+            "SEARCH Jobs USING COVERING INDEX idx_jobs_autoscale_failed (container_group_id=? AND failed>?)",
+            "SCAN recently_failed",
+            "UNION USING TEMP B-TREE",
+            "CO-ROUTINE recently_canceled",
+            "SEARCH Jobs USING COVERING INDEX idx_jobs_autoscale_canceled (container_group_id=? AND canceled>?)",
+            "SCAN recently_canceled",
+            "SCAN SUBQUERY 8"
+          ]
+        },
+        {
+          "group": "overlap",
+          "result": 64,
+          "median_ms": 0.0523,
+          "vm_steps_approx": 3200,
+          "plan": [
+            "CO-ROUTINE SUBQUERY 8",
+            "COMPOUND QUERY",
+            "LEFT-MOST SUBQUERY",
+            "CO-ROUTINE active_jobs",
+            "SEARCH Jobs USING INDEX idx_container_group_id_status (container_group_id=? AND status=?)",
+            "SCAN active_jobs",
+            "UNION USING TEMP B-TREE",
+            "CO-ROUTINE recently_completed",
+            "SEARCH Jobs USING COVERING INDEX idx_jobs_autoscale_completed (container_group_id=? AND completed>?)",
+            "SCAN recently_completed",
+            "UNION USING TEMP B-TREE",
+            "CO-ROUTINE recently_failed",
+            "SEARCH Jobs USING COVERING INDEX idx_jobs_autoscale_failed (container_group_id=? AND failed>?)",
+            "SCAN recently_failed",
+            "UNION USING TEMP B-TREE",
+            "CO-ROUTINE recently_canceled",
+            "SEARCH Jobs USING COVERING INDEX idx_jobs_autoscale_canceled (container_group_id=? AND canceled>?)",
+            "SCAN recently_canceled",
+            "SCAN SUBQUERY 8"
+          ]
+        }
+      ]
+    }
+  ],
+  "index_sizes": [
+    {
+      "name": "idx_jobs_autoscale_canceled",
+      "bytes": 28864512,
+      "entries": 402000
+    },
+    {
+      "name": "idx_jobs_autoscale_completed",
+      "bytes": 28975104,
+      "entries": 404007
+    },
+    {
+      "name": "idx_jobs_autoscale_failed",
+      "bytes": 28864512,
+      "entries": 402000
+    }
+  ]
+}
