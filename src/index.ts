@@ -106,12 +106,27 @@ class CatchAll extends OpenAPIRoute {
 
 router.all('*', CatchAll);
 
+export async function runScheduledAutoscaling(
+	env: Env,
+	evaluate: (env: Env) => Promise<void> = evaluateAllScalingRules
+): Promise<void> {
+	try {
+		await evaluate(env);
+	} catch (error) {
+		// Per-rule failures are isolated by evaluateAllScalingRules. Anything that
+		// reaches here is a tick-level failure (for example, listing rules from D1).
+		// Log it with context, then preserve the failed Cron outcome for monitoring.
+		console.error(`Scheduled autoscaling evaluation failed: ${error}`);
+		throw error;
+	}
+}
+
 export default {
 	fetch: async (request: Request, env: Env, ctx: any) => {
 		return router.handle(request, env, ctx).then(corsify);
 	},
 
 	scheduled: async (event: ScheduledEvent, env: Env, ctx: ExecutionContext) => {
-		return evaluateAllScalingRules(env);
+		return runScheduledAutoscaling(env);
 	},
 };

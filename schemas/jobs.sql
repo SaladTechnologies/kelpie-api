@@ -44,3 +44,13 @@ WHERE
 CREATE INDEX idx_container_group_id ON Jobs (status, container_group_id)
 WHERE
   status = 'running' OR status = 'pending';
+
+-- Bounded autoscaler timestamp branches: skip nulls and cover the job ID.
+CREATE INDEX IF NOT EXISTS idx_jobs_autoscale_completed
+ON Jobs (container_group_id, completed, id) WHERE completed IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_jobs_autoscale_failed
+ON Jobs (container_group_id, failed, id) WHERE failed IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_jobs_autoscale_canceled
+ON Jobs (container_group_id, canceled, id) WHERE canceled IS NOT NULL;

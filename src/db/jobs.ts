@@ -211,22 +211,44 @@ export async function countActiveAndRecentlyActiveJobsInContainerGroup(
 	idleThreshold: number,
 	env: Env
 ): Promise<number> {
+	// Each predicate gets its own indexed range instead of scanning the group's
+	// entire history for an OR across status and three timestamps. Bound every
+	// branch before deduplicating: if any branch reaches maxCount, the union
+	// already contains enough distinct jobs; otherwise every branch is complete.
+	// A job can match several timestamps (or still be active), so UNION ALL would
+	// overcount. Keep the timestamp predicates independent of current status.
+	// Apply migration 0003 before deploying this query for indexed range access.
 	const query = `
-SELECT COUNT(*)
-FROM (
-	SELECT 1 FROM Jobs
-	WHERE container_group_id = ? AND (
-		status = "running" OR
-		status = "pending" OR
-		completed >= datetime('now', '-' || ? || ' seconds') OR
-		failed >= datetime('now', '-' || ? || ' seconds') OR
-		canceled >= datetime('now', '-' || ? || ' seconds')
-	)
-LIMIT ?
+WITH active_jobs AS (
+ SELECT id FROM Jobs
+ WHERE container_group_id = ?1 AND (status = 'running' OR status = 'pending')
+ LIMIT ?3
+), recently_completed AS (
+ SELECT id FROM Jobs
+ WHERE container_group_id = ?1 AND completed >= datetime('now', '-' || ?2 || ' seconds')
+ LIMIT ?3
+), recently_failed AS (
+ SELECT id FROM Jobs
+ WHERE container_group_id = ?1 AND failed >= datetime('now', '-' || ?2 || ' seconds')
+ LIMIT ?3
+), recently_canceled AS (
+ SELECT id FROM Jobs
+ WHERE container_group_id = ?1 AND canceled >= datetime('now', '-' || ?2 || ' seconds')
+ LIMIT ?3
+)
+SELECT COUNT(*) AS num_jobs FROM (
+ SELECT id FROM active_jobs
+ UNION
+ SELECT id FROM recently_completed
+ UNION
+ SELECT id FROM recently_failed
+ UNION
+ SELECT id FROM recently_canceled
+ LIMIT ?3
 )
 	`;
-	const { results } = await env.DB.prepare(query).bind(containerGroupId, idleThreshold, idleThreshold, idleThreshold, maxCount).all();
-	return results[0]['COUNT(*)'] as number;
+	const { results } = await env.DB.prepare(query).bind(containerGroupId, idleThreshold, maxCount).all();
+	return results[0]['num_jobs'] as number;
 }
 
 export async function purgeJobsForContainerGroup(containerGroupId: string, userId: string, env: Env): Promise<number> {
