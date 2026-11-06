@@ -45,11 +45,14 @@ export async function validateAuth(req: AuthedRequest, env: Env) {
 			 * If we don't have a cached user ID, we need to validate the API Key.
 			 */
 			try {
-				const payload = await validateSaladApiKey(env, saladApiKey, saladOrg || '');
-				req.saladOrg = payload.organization_name;
-				payload.organization_id;
 				try {
-					await listContainerGroups(env, req.saladOrg, saladProject, true);
+					const payload = await validateSaladApiKey(env, saladApiKey, saladOrg || '');
+					req.saladOrg = payload.organization_name;
+				} catch {
+					req.saladOrg = saladOrg;
+				}
+				try {
+					await listContainerGroups(env, req.saladOrg, saladProject, true, saladApiKey ?? undefined);
 					req.saladProject = saladProject;
 					/**
 					 * If everything is valid, we check to see if we have a user provisioned for this org already.
@@ -102,7 +105,7 @@ export async function validateAuth(req: AuthedRequest, env: Env) {
 				 * If we check to make sure the project exists and is valid.
 				 */
 				try {
-					await listContainerGroups(env, req.saladOrg, saladProject, true);
+					await listContainerGroups(env, req.saladOrg, saladProject, true, saladApiKey ?? undefined);
 					req.saladProject = saladProject;
 
 					/**
@@ -182,7 +185,7 @@ export async function validateSaladApiKey(env: Env, apiKey: string, orgName: str
 	}
 
 	if (!body.is_entitled) {
-		throw new Error('This organization is not entitled to use the Kelpie API');
+		console.log(`Organization ${orgName} is not entitled to use the Kelpie API`);
 	}
 
 	await env.token_cache.put(cacheKey, JSON.stringify(body), {
