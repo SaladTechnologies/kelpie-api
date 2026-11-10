@@ -67,10 +67,12 @@ export async function getJobByUserAndId(userId: string, jobId: string, env: Env)
 }
 
 export async function getHighestPriorityJob(env: Env, userId: string, containerGroup: string, num: number = 0): Promise<DBJob | null> {
+	// Keep stale-job selection on the partial running index. The chronological
+	// listing index can otherwise scan a tenant's entire completed-job history.
 	const { results: runningResults } = await env.DB.prepare(
 		`
 SELECT *
-FROM Jobs
+FROM Jobs INDEXED BY idx_running_jobs
 WHERE status = 'running' AND user_id = ? AND container_group_id = ? AND (
 		heartbeat <= datetime('now', '-' || (2 * heartbeat_interval) || ' seconds')
 		OR
