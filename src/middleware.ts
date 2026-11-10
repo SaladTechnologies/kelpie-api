@@ -4,6 +4,43 @@ import * as jose from 'jose';
 import { listContainerGroups } from './utils/salad';
 import { createUser, getUserByUsername } from './db/users';
 import { Buffer } from 'node:buffer';
+import { emitSafeEvent } from './utils/observability';
+
+interface SaladAuthorizationCacheEntry {
+	version: 1;
+	userId: string;
+	requestOrganization: string;
+	organization: string;
+	project: string;
+	expiresAt: number;
+}
+
+// Hash a serialized tuple rather than joining with a delimiter. This separates
+// this cache from legacy keys/JWT entries and avoids retaining credentials in keys.
+export async function saladAuthorizationCacheKey(apiKey: string, organization: string, project: string): Promise<string> {
+	const bytes = new TextEncoder().encode(JSON.stringify([apiKey, organization, project]));
+	const digest = await crypto.subtle.digest('SHA-256', bytes);
+	return 'salad-auth:v1:' + Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function readSaladAuthorization(raw: string | null, organization: string, project: string): SaladAuthorizationCacheEntry | undefined {
+	try {
+		const entry = JSON.parse(raw || 'null');
+		if (
+			entry?.version === 1 &&
+			typeof entry.userId === 'string' && entry.userId.trim().length > 0 &&
+			entry.requestOrganization === organization &&
+			typeof entry.organization === 'string' && entry.organization.trim().length > 0 &&
+			entry.project === project &&
+			typeof entry.expiresAt === 'number' && Number.isFinite(entry.expiresAt) && entry.expiresAt > Date.now()
+		) {
+			return entry;
+		}
+	} catch {
+		// Untrusted/malformed cache data must never authorize a request.
+	}
+	return undefined;
+}
 
 export async function validateAuth(req: AuthedRequest, env: Env) {
 	const kelpieApiKey = req.headers.get(env.API_HEADER);
@@ -34,12 +71,18 @@ export async function validateAuth(req: AuthedRequest, env: Env) {
 		/**
 		 * If a user includes a Salad API Key, we check if we have a cached user ID and organization.
 		 */
-		let idAndOrg = await env.user_tokens.get(`${saladApiKey}|${saladOrg}|${saladProject}`);
-		if (idAndOrg) {
-			const [id, org, project] = idAndOrg.split('|');
-			req.userId = id;
-			req.saladOrg = org;
-			req.saladProject = project;
+		const cacheKey = await saladAuthorizationCacheKey(saladApiKey, saladOrg, saladProject);
+		let cached: SaladAuthorizationCacheEntry | undefined;
+		try {
+			cached = readSaladAuthorization(await env.user_tokens.get(cacheKey), saladOrg, saladProject);
+		} catch {
+			emitSafeEvent('auth_cache_error', { operation: 'read', cache: 'salad_authorization' });
+			// KV availability is not an authorization decision: validate normally.
+		}
+		if (cached) {
+			req.userId = cached.userId;
+			req.saladOrg = cached.organization;
+			req.saladProject = cached.project;
 		} else {
 			/**
 			 * If we don't have a cached user ID, we need to validate the API Key.
@@ -72,9 +115,25 @@ export async function validateAuth(req: AuthedRequest, env: Env) {
 					 * Finally, we cache the user ID and organization for future requests. This token expires
 					 * so that we have to revalidate the API Key periodically.
 					 */
-					await env.user_tokens.put(`${saladApiKey}|${saladProject}`, `${userId}|${req.saladOrg}|${saladProject}`, {
-						expirationTtl: parseInt(env.TOKEN_CACHE_TTL),
-					});
+					const ttl = Number(env.TOKEN_CACHE_TTL);
+					// KV requires a minimum 60s TTL. Invalid configuration disables
+					// this optimization rather than failing validated credentials.
+					if (Number.isSafeInteger(ttl) && ttl >= 60) {
+						const entry: SaladAuthorizationCacheEntry = {
+							version: 1,
+							userId,
+							requestOrganization: saladOrg,
+							organization: req.saladOrg,
+							project: saladProject,
+							expiresAt: Date.now() + ttl * 1000,
+						};
+						try {
+							await env.user_tokens.put(cacheKey, JSON.stringify(entry), { expirationTtl: ttl });
+						} catch {
+							emitSafeEvent('auth_cache_error', { operation: 'write', cache: 'salad_authorization' });
+							// Cache writes are best-effort after successful validation.
+						}
+					}
 				} catch (err: any) {
 					return error(403, { error: 'Forbidden', message: `Invalid Project '${saladProject}': ${err.message}` });
 				}
@@ -170,7 +229,8 @@ export async function validateSaladApiKey(env: Env, apiKey: string, orgName: str
 	});
 
 	if (!response.ok) {
-		console.error(await response.text());
+		try { await response.body?.cancel(); } catch { /* Best-effort connection cleanup; never expose the response body. */ }
+		emitSafeEvent('auth_upstream_error', { operation: 'api_key_validation', http_status: response.status });
 		throw new Error('Error Accessing Authentication Service');
 	}
 
@@ -185,7 +245,7 @@ export async function validateSaladApiKey(env: Env, apiKey: string, orgName: str
 	}
 
 	if (!body.is_entitled) {
-		console.log(`Organization ${orgName} is not entitled to use the Kelpie API`);
+		emitSafeEvent('auth_entitlement', { entitled: false });
 	}
 
 	await env.token_cache.put(cacheKey, JSON.stringify(body), {
@@ -208,7 +268,8 @@ export async function getJWKs(env: Env): Promise<jose.JSONWebKeySet> {
 
 	const response = await fetch(env.JWKS_URL);
 	if (!response.ok) {
-		console.error(await response.text());
+		try { await response.body?.cancel(); } catch { /* Best-effort connection cleanup; never expose the response body. */ }
+		emitSafeEvent('auth_upstream_error', { operation: 'jwks_fetch', http_status: response.status });
 		throw new Error('Error Accessing JWKS');
 	}
 

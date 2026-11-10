@@ -55,7 +55,6 @@ export class CreateUser extends OpenAPIRoute {
 			user = await getUserById(env, userId);
 			return new Response(JSON.stringify(user), { status: 201, headers: { 'Content-Type': 'application/json' } });
 		} catch (e: any) {
-			console.log(e);
 			return error(500, { error: 'Internal server error', message: e.message });
 		}
 	}
@@ -133,7 +132,6 @@ export class CreateToken extends OpenAPIRoute {
 				headers: { 'Content-Type': 'application/json' },
 			});
 		} catch (e: any) {
-			console.log(e);
 			return error(500, { error: 'Internal server error', message: e.message });
 		}
 	}
@@ -171,7 +169,6 @@ export class ClearUsers extends OpenAPIRoute {
 			await clearAllNonAdminUserTokens(env);
 			return new Response(null, { status: 204 });
 		} catch (e: any) {
-			console.log(e);
 			return error(500, { error: 'Internal server error', message: e.message });
 		}
 	}
@@ -224,7 +221,6 @@ export class GetUser extends OpenAPIRoute {
 			}
 			return user;
 		} catch (e: any) {
-			console.log(e);
 			return error(500, { error: 'Internal server error', message: e.message });
 		}
 	}

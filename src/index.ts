@@ -26,6 +26,7 @@ import {
 	DeleteScalingRule,
 } from './routes/scaling-rules';
 import { evaluateAllScalingRules } from './autoscale';
+import { observeRequest } from './utils/observability';
 
 const router = OpenAPIRouter({
 	schema: {
@@ -123,7 +124,7 @@ export async function runScheduledAutoscaling(
 
 export default {
 	fetch: async (request: Request, env: Env, ctx: any) => {
-		return router.handle(request, env, ctx).then(corsify);
+		return observeRequest(request, () => router.handle(request, env, ctx).then(corsify));
 	},
 
 	scheduled: async (event: ScheduledEvent, env: Env, ctx: ExecutionContext) => {
