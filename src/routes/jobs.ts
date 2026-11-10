@@ -1,3 +1,4 @@
+import { emitSafeEvent, classifyFailure } from '../utils/observability';
 import { OpenAPIRoute, Path, Query, Enumeration } from '@cloudflare/itty-router-openapi';
 import { error } from '../utils/error';
 import {
@@ -21,6 +22,7 @@ import {
 	updateJobHeartbeat,
 	incrementFailedAttempts,
 	listJobsWithArbitraryFilter,
+	isValidListingPagination,
 	clearJobs,
 	purgeJobsForContainerGroup,
 } from '../db/jobs';
@@ -240,7 +242,6 @@ export class CreateJob extends OpenAPIRoute {
 				},
 			});
 		} catch (e: any) {
-			console.log(e);
 			return error(500, { error: 'Internal server error', message: e.message });
 		}
 	}
@@ -308,7 +309,6 @@ export class BatchCreateJobs extends OpenAPIRoute {
 				},
 			});
 		} catch (e: any) {
-			console.log(e);
 			return error(500, { error: 'Internal server error', message: e.message });
 		}
 	}
@@ -372,7 +372,6 @@ export class GetJob extends OpenAPIRoute {
 
 			return jobToReturn;
 		} catch (e: any) {
-			console.log(e);
 			return error(500, { error: 'Internal server error', message: e.message });
 		}
 	}
@@ -445,7 +444,6 @@ export class GetWork extends OpenAPIRoute {
 
 			return [];
 		} catch (e: any) {
-			console.log(e);
 			return error(500, { error: 'Internal server error', message: e.message });
 		}
 	}
@@ -507,7 +505,6 @@ export class JobHeartbeat extends OpenAPIRoute {
 			if (e.message === 'Job not found') {
 				return error(404, { error: 'Not Found', message: 'Job not found' });
 			}
-			console.error('Something went wrong with heartbeats:', e.message);
 			return error(500, { error: 'Internal server error', message: e.message });
 		}
 	}
@@ -590,7 +587,6 @@ export class ReportJobFailure extends OpenAPIRoute {
 				},
 			});
 		} catch (e: any) {
-			console.log(e);
 			return error(500, { error: 'Internal server error', message: e.message });
 		}
 	}
@@ -622,10 +618,11 @@ async function fireWebhook(
 				}),
 			});
 			if (!resp.ok) {
-				console.log('Failed to send webhook', resp.status, await resp.text());
+				try { await resp.body?.cancel(); } catch { /* Preserve the webhook failure without logging its body. */ }
+				emitSafeEvent('webhook_failure', { http_status: resp.status, sample_rate: 1 });
 			}
 		} catch (e: any) {
-			console.log('Failed to send webhook', e);
+			emitSafeEvent('webhook_failure', { error_kind: classifyFailure(e), sample_rate: 1 });
 		}
 	}
 }
@@ -682,7 +679,6 @@ export class ReportJobCompleted extends OpenAPIRoute {
 			ctx.waitUntil(fireWebhook(env, request.headers.get(env.API_HEADER) || '', id, userId, machine_id, container_group_id, 'completed'));
 			return { message: 'Completed reported' };
 		} catch (e: any) {
-			console.log(e);
 			return error(500, { error: 'Internal server error', message: e.message });
 		}
 	}
@@ -742,7 +738,6 @@ export class CancelJob extends OpenAPIRoute {
 				},
 			});
 		} catch (e: any) {
-			console.log(e);
 			return error(500, { error: 'Internal server error', message: e.message });
 		}
 	}
@@ -806,6 +801,10 @@ export class ListJobs extends OpenAPIRoute {
 			return error(400, { error: 'User Required', message: 'No user ID found' });
 		}
 
+		if (!isValidListingPagination(data.query.page_size, data.query.page)) {
+			return error(400, { error: 'Invalid request', message: 'page and page_size must be positive safe integers with a safe offset' });
+		}
+
 		const filter: any = {};
 		if (userId !== env.ADMIN_ID) {
 			filter.user_id = userId;
@@ -824,7 +823,6 @@ export class ListJobs extends OpenAPIRoute {
 				jobs: jobs.map(dbJobToAPIJob),
 			};
 		} catch (e: any) {
-			console.log(e);
 			return error(500, { error: 'Internal server error', message: e.message });
 		}
 	}
@@ -864,7 +862,6 @@ export class ClearJobs extends OpenAPIRoute {
 			await clearJobs(env);
 			return new Response(null, { status: 204 });
 		} catch (e: any) {
-			console.log(e);
 			return error(500, { error: 'Internal server error', message: e.message });
 		}
 	}
@@ -912,7 +909,6 @@ export class PurgeJobsForContainerGroup extends OpenAPIRoute {
 			const count = await purgeJobsForContainerGroup(container_group_id, userId, env);
 			return { count };
 		} catch (e: any) {
-			console.log(e);
 			return error(500, { error: 'Internal server error', message: e.message });
 		}
 	}

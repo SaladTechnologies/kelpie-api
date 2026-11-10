@@ -551,3 +551,15 @@ Now navigate to the local server's swagger docs at `http://localhost:8787/docs`.
 1. Make sure the server is started with `npm start`
 2. (Only the first time) Run `./setup-tests.sh` to set up the test environment
 3. Run `npm test` to run the test suite
+
+### Credential-free regression checks
+
+Run `npm run test:local` for isolated autoscaler, reliability and existing HTTP integration tests. This uses ephemeral local D1/KV, synthesized JWTs and mocked upstream services; it never loads production configuration or .dev.vars. It does not replace staging validation against real upstream authorization and Cloudflare KV.
+
+### Listing, cache and logging rollout
+
+- The additive listing index is in `migrations/0004_add_job_listing_index.sql`: `idx_jobs_user_created ON Jobs(user_id, created)`. Verify existing indexes and migration history before applying only this migration. Never run `schemas/jobs.sql` or `setup-db.sh --remote` against production; they are destructive bootstrap scripts.
+- Salad API-key authorization is cached separately for each key, organization and project using the configured `TOKEN_CACHE_TTL` (currently 60 seconds). Hits do not extend expiry. Permission changes can remain unseen while an approval is cached; this is not a globally exact 60-second revocation guarantee. Test expiry, revocation and scope isolation in staging before rollout. Legacy Kelpie keys and JWT authentication are unchanged.
+- Structured logs expose actual HTTP statuses, categorical D1/upstream errors and request IDs without logging credentials or payloads. Failures and successful submit/completion responses are logged at 100%; successful polling/heartbeats at 1%, other successes at 10%. Platform sampling may further reduce coverage.
+- The listing benchmark (`scripts/benchmark-job-listing.py`, results in `reports/job-listing-benchmark.json`) uses synthetic local SQLite data, not production billing measurements.
+- Preserve production bindings, secrets and triggers when deploying. If rollback is needed, revert the Worker version and retain the additive index pending separate review.

@@ -1,0 +1,169 @@
+{
+  "sqlite_version": "3.37.2",
+  "rows": 100000,
+  "notes": "Synthetic local SQLite, warm cache median of 5; VM instructions are NOT rows read. Equal-timestamp ordering is unspecified. Admin queries unchanged. No ANALYZE forcing or production data.",
+  "database_bytes_before": 15110144,
+  "database_bytes_after": 18665472,
+  "index_added_bytes": 3555328,
+  "index_build_ms": 32.1,
+  "before": {
+    "user_first": {
+      "plan": [
+        "SCAN Jobs",
+        "USE TEMP B-TREE FOR ORDER BY"
+      ],
+      "median_ms": 7.807,
+      "approx_vm_steps": 474400,
+      "returned": 100
+    },
+    "user_deep": {
+      "plan": [
+        "SCAN Jobs",
+        "USE TEMP B-TREE FOR ORDER BY"
+      ],
+      "median_ms": 9.175,
+      "approx_vm_steps": 470400,
+      "returned": 100
+    },
+    "user_status": {
+      "plan": [
+        "SCAN Jobs",
+        "USE TEMP B-TREE FOR ORDER BY"
+      ],
+      "median_ms": 5.609,
+      "approx_vm_steps": 389200,
+      "returned": 100
+    },
+    "user_group": {
+      "plan": [
+        "SCAN Jobs",
+        "USE TEMP B-TREE FOR ORDER BY"
+      ],
+      "median_ms": 5.273,
+      "approx_vm_steps": 356200,
+      "returned": 100
+    },
+    "user_status_group": {
+      "plan": [
+        "SCAN Jobs",
+        "USE TEMP B-TREE FOR ORDER BY"
+      ],
+      "median_ms": 5.127,
+      "approx_vm_steps": 336800,
+      "returned": 100
+    },
+    "user_pending": {
+      "plan": [
+        "SEARCH Jobs USING INDEX idx_pending_jobs (status=? AND user_id=?)",
+        "USE TEMP B-TREE FOR ORDER BY"
+      ],
+      "median_ms": 0.529,
+      "approx_vm_steps": 19800,
+      "returned": 100
+    },
+    "admin_all": {
+      "plan": [
+        "SCAN Jobs",
+        "USE TEMP B-TREE FOR ORDER BY"
+      ],
+      "median_ms": 69.639,
+      "approx_vm_steps": 3502700,
+      "returned": 100
+    },
+    "admin_status": {
+      "plan": [
+        "SCAN Jobs",
+        "USE TEMP B-TREE FOR ORDER BY"
+      ],
+      "median_ms": 32.447,
+      "approx_vm_steps": 1759400,
+      "returned": 100
+    },
+    "admin_group": {
+      "plan": [
+        "SCAN Jobs",
+        "USE TEMP B-TREE FOR ORDER BY"
+      ],
+      "median_ms": 21.667,
+      "approx_vm_steps": 1154600,
+      "returned": 100
+    }
+  },
+  "after": {
+    "user_first": {
+      "plan": [
+        "SEARCH Jobs USING INDEX idx_jobs_user_created (user_id=?)"
+      ],
+      "median_ms": 0.178,
+      "approx_vm_steps": 3300,
+      "returned": 100
+    },
+    "user_deep": {
+      "plan": [
+        "SEARCH Jobs USING INDEX idx_jobs_user_created (user_id=?)"
+      ],
+      "median_ms": 0.278,
+      "approx_vm_steps": 19300,
+      "returned": 100
+    },
+    "user_status": {
+      "plan": [
+        "SEARCH Jobs USING INDEX idx_jobs_user_created (user_id=?)"
+      ],
+      "median_ms": 0.223,
+      "approx_vm_steps": 4000,
+      "returned": 100
+    },
+    "user_group": {
+      "plan": [
+        "SEARCH Jobs USING INDEX idx_jobs_user_created (user_id=?)"
+      ],
+      "median_ms": 0.231,
+      "approx_vm_steps": 4600,
+      "returned": 100
+    },
+    "user_status_group": {
+      "plan": [
+        "SEARCH Jobs USING INDEX idx_jobs_user_created (user_id=?)"
+      ],
+      "median_ms": 0.512,
+      "approx_vm_steps": 8200,
+      "returned": 100
+    },
+    "user_pending": {
+      "plan": [
+        "SEARCH Jobs USING INDEX idx_jobs_user_created (user_id=?)"
+      ],
+      "median_ms": 0.341,
+      "approx_vm_steps": 6300,
+      "returned": 100
+    },
+    "admin_all": {
+      "plan": [
+        "SCAN Jobs",
+        "USE TEMP B-TREE FOR ORDER BY"
+      ],
+      "median_ms": 69.719,
+      "approx_vm_steps": 3502700,
+      "returned": 100
+    },
+    "admin_status": {
+      "plan": [
+        "SCAN Jobs",
+        "USE TEMP B-TREE FOR ORDER BY"
+      ],
+      "median_ms": 32.459,
+      "approx_vm_steps": 1759400,
+      "returned": 100
+    },
+    "admin_group": {
+      "plan": [
+        "SCAN Jobs",
+        "USE TEMP B-TREE FOR ORDER BY"
+      ],
+      "median_ms": 21.48,
+      "approx_vm_steps": 1154600,
+      "returned": 100
+    }
+  }
+}

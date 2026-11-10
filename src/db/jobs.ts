@@ -164,6 +164,11 @@ export async function updateJobHeartbeat(id: string, userId: string, machineId: 
 	return status;
 }
 
+export function isValidListingPagination(pageSize: number, page: number): boolean {
+	return Number.isSafeInteger(pageSize) && pageSize > 0 && Number.isSafeInteger(page) && page > 0
+		&& Number.isSafeInteger((page - 1) * pageSize);
+}
+
 export async function listJobsWithArbitraryFilter(
 	filter: any,
 	asc: boolean,
@@ -171,6 +176,11 @@ export async function listJobsWithArbitraryFilter(
 	page: number = 1,
 	env: Env
 ): Promise<DBJob[]> {
+	if (!isValidListingPagination(pageSize, page)) {
+		throw new RangeError('page and page_size must be positive safe integers with a safe offset');
+	}
+	// Migration 0004 adds (user_id, created) for tenant-scoped chronological pages.
+	// Preserve the existing filter, projection and OFFSET contract.
 	let query = 'SELECT * FROM Jobs';
 	const keys = Object.keys(filter);
 	if (keys.length) {
@@ -187,10 +197,9 @@ export async function listJobsWithArbitraryFilter(
 }
 
 export async function incrementFailedAttempts(jobId: string, userId: String, env: Env): Promise<void> {
-	const resp = await env.DB.prepare('UPDATE Jobs SET num_failures = num_failures + 1 WHERE id = ? AND user_id = ?')
+	await env.DB.prepare('UPDATE Jobs SET num_failures = num_failures + 1 WHERE id = ? AND user_id = ?')
 		.bind(jobId, userId)
 		.run();
-	console.log(JSON.stringify(resp, null, 2));
 }
 
 export async function getFailedAttempts(jobId: string, userId: string, env: Env): Promise<number | null> {

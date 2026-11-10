@@ -5,9 +5,12 @@
   "scripts": {
     "deploy": "wrangler deploy",
     "start": "wrangler -c wrangler.dev.toml dev",
-    "test": "npm run test:autoscale && vitest run --no-file-parallelism",
+    "test": "npm run test:autoscale && npm run test:reliability && vitest run --no-file-parallelism",
     "test:autoscale": "vitest run --config vitest.autoscale.config.js --no-file-parallelism",
-    "benchmark:autoscale": "python3 scripts/benchmark-autoscaler.py"
+    "benchmark:autoscale": "python3 scripts/benchmark-autoscaler.py",
+    "test:reliability": "vitest run --config vitest.reliability.config.js --no-file-parallelism",
+    "test:integration:local": "vitest run --config vitest.integration-local.config.js --no-file-parallelism",
+    "test:local": "npm run test:autoscale && npm run test:reliability && npm run test:integration:local"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.8.32",

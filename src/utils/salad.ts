@@ -1,3 +1,4 @@
+import { emitSafeEvent, upstreamOperation } from './observability';
 import { Env, SaladContainerGroup, ListContainerGroupsResponse, InstanceList } from '../types';
 
 const saladBaseUrl = 'https://api.salad.com/api/public';
@@ -8,15 +9,22 @@ export function sleep(ms: number): Promise<void> {
 
 export async function fetchWithRetries(url: string, options: RequestInit, retries: number = 3): Promise<Response> {
 	let response: Response | undefined;
+	const operation = upstreamOperation(url, options.method);
 	for (let i = 0; i < retries; i++) {
-		response = await fetch(url, options);
+		try {
+			response = await fetch(url, options);
+		} catch (err) {
+			emitSafeEvent('salad_api_failure', { operation, error_kind: 'transport_error', attempts: i + 1, sample_rate: 1 });
+			throw err;
+		}
 		if (response.ok || response.status === 404) {
+			if (!response.ok) emitSafeEvent('salad_api_failure', { operation, http_status: response.status, attempts: i + 1, sample_rate: 1 });
 			return response;
 		}
-		console.log(`Fetch failed (attempt ${i + 1}): ${response.status}`);
 		await sleep(1000 * (i + 1));
 	}
 	if (response) {
+		emitSafeEvent('salad_api_failure', { operation, http_status: response.status, attempts: retries, sample_rate: 1 });
 		return response;
 	}
 	throw new Error(`Did not receive response from API after ${retries} attempts`);
@@ -37,8 +45,7 @@ export async function listContainerGroups(env: Env, orgName: string, projectName
 	const url = `${saladBaseUrl}/organizations/${orgName}/projects/${projectName}/containers`;
 	const response = await fetchWithRetries(url, { headers: { 'Salad-Api-Key': apiKey || env.SALAD_API_KEY } }, maxRetries);
 	if (!response.ok) {
-		console.log(`Failed to fetch container groups in project ${orgName}/${projectName}: ${response.status}`);
-		console.log(await response.text());
+		try { await response.body?.cancel(); } catch { /* Discard only; preserve the original API error. */ }
 		throw new Error(`Failed to fetch container groups in project ${orgName}/${projectName}: ${response.status}: ${response.statusText}`);
 	}
 	const data = (await response.json()) as ListContainerGroupsResponse;
@@ -102,9 +109,6 @@ export async function reallocateInstance(
 			const errorResponse = await response.text();
 			throw new Error(`Failed to reallocate instance ${orgName}/${projectName}/${containerGroupName}/${machineId}: ${errorResponse}`);
 		}
-		console.log(
-			`Failed to reallocate instance ${orgName}/${projectName}/${containerGroupName}/${machineId}: ${response.status}: ${response.statusText}`
-		);
 	}
 }
 

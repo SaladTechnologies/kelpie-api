@@ -54,3 +54,6 @@ ON Jobs (container_group_id, failed, id) WHERE failed IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_jobs_autoscale_canceled
 ON Jobs (container_group_id, canceled, id) WHERE canceled IS NOT NULL;
+
+-- User-scoped chronological listings (migration 0004).
+CREATE INDEX IF NOT EXISTS idx_jobs_user_created ON Jobs (user_id, created);

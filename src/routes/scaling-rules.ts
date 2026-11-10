@@ -80,7 +80,6 @@ export class CreateScalingRule extends OpenAPIRoute {
 			}
 			return new Response(JSON.stringify(rule), { status: 201, headers: { 'Content-Type': 'application/json' } });
 		} catch (e: any) {
-			console.log(e);
 			return error(500, { error: 'Internal server error', message: e.message });
 		}
 	}
@@ -183,7 +182,6 @@ export class ClearScalingRules extends OpenAPIRoute {
 			await clearAllScalingRules(env);
 			return new Response(null, { status: 204 });
 		} catch (e: any) {
-			console.log(e);
 			return error(500, { error: 'Internal server error', message: e.message });
 		}
 	}
@@ -332,7 +330,6 @@ export class DeleteScalingRule extends OpenAPIRoute {
 			}
 			return new Response(null, { status: 204 });
 		} catch (e: any) {
-			console.log(e);
 			return error(500, { error: 'Internal server error', message: e.message });
 		}
 	}
