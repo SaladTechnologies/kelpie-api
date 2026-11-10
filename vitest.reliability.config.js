@@ -4,7 +4,7 @@ import { defineWorkersConfig } from '@cloudflare/vitest-pool-workers/config';
 // Isolated, credential-free fixtures. Never load production wrangler.toml or .dev.vars.
 export default defineWorkersConfig({
 	test: {
-		include: ['src/middleware.cache.test.ts', 'src/db/jobs.listing.test.ts', 'src/utils/observability.test.ts', 'src/utils/salad.observability.test.ts'],
+		include: ['src/middleware.cache.test.ts', 'src/db/jobs.listing.test.ts', 'src/db/jobs.claim.test.ts', 'src/utils/observability.test.ts', 'src/utils/salad.observability.test.ts'],
 		poolOptions: {
 			workers: {
 				miniflare: {

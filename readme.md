@@ -563,3 +563,7 @@ Run `npm run test:local` for isolated autoscaler, reliability and existing HTTP 
 - Structured logs expose actual HTTP statuses, categorical D1/upstream errors and request IDs without logging credentials or payloads. Failures and successful submit/completion responses are logged at 100%; successful polling/heartbeats at 1%, other successes at 10%. Platform sampling may further reduce coverage.
 - The listing benchmark (`scripts/benchmark-job-listing.py`, results in `reports/job-listing-benchmark.json`) uses synthetic local SQLite data, not production billing measurements.
 - Preserve production bindings, secrets and triggers when deploying. If rollback is needed, revert the Worker version and retain the additive index pending separate review.
+
+### Stale-running-job query plan
+
+Stale-running-job selection explicitly uses the existing partial `idx_running_jobs` index so the newer chronological listing index cannot make worker polling scan a tenant's completed-job history. The filter, stale threshold, sort and offset are unchanged. Before deploying, verify that `idx_running_jobs ON Jobs(status, user_id, container_group_id, heartbeat, created) WHERE status = 'running'` exists with that definition. This fix needs no new database migration; missing or renamed indexes must be reconciled before deployment. The credential-free suite covers selection behavior and a large-history query-plan regression.
